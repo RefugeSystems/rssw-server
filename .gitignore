@@ -1,3 +1,8 @@
+app/configuration/*.json
+
+# Eclipse
+.project
+
 # Logs
 logs
 *.log
