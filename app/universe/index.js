@@ -13,21 +13,32 @@ closeSocket = function(connection, conf) {
  * @class Universe
  * @extends EventEmitter
  * @constructor
- * @param {Array} models
  * @param {Object} configuration
- * @param {Array} [extensions]
+ * @param {Array} models
+ * @param {Array} handlers
  */
-module.exports = function(models, configuration, extensions) {
+module.exports = function(configuration, models, handlers) {
 	this.setMaxListeners(200);
 	var Player = require("../handlers/player/channel"),
+		nouns = this.nouns = {},
 		collections = {},
 		universe = this,
+		modeling = {},
 		players = {},
-		nouns = {},
+		generalError,
 		loading,
+		db,
 		x;
 
-	var db = configuration.mongo.connectDB(configuration.core.database);
+	generalError = function(exception, message) {
+		universe.emit("error", {
+			"message": message || "General Error",
+			"time": Date.now(),
+			"error": exception
+		});
+	};
+	
+	db = configuration.mongo.connectDB(configuration.core.database);
 	collections.player = db.collection("player");
 	for(x=0; x<models.length; x++) {
 		collections[models[x].type] = db.collection(models[x].type);
@@ -42,6 +53,7 @@ module.exports = function(models, configuration, extensions) {
 		return collections[models[0].type].find().toArray();
 	});
 	models.forEach(function(load, i) {
+		modeling[load.type] = load;
 		loading = loading.then(function(buffer) {
 			console.log(" - Loading " + load.type);
 			nouns[load.type] = {};
@@ -58,13 +70,59 @@ module.exports = function(models, configuration, extensions) {
 		universe.emit("online", {
 			"time": Date.now()
 		});
-	});
-	loading.catch(function(err) {
+	}).then(function() {
+		handlers.forEach(function(handler) {
+			universe.on(handler.event, function(event) {
+				try {
+					handler.process(universe, event);
+				} catch(error) {
+					universe.emit("error", {
+						"message": "Event handling error",
+						"event_type": handler.event,
+						"time": Date.now(),
+						"error": error
+					});
+				}
+			});
+		});
+	}).catch(function(err) {
 		universe.emit("error", {
 			"message": err.message || "Unspecified Error",
 			"code": "fault:loading",
 			"error": err
 		});
+	});
+	
+	universe.on("player:model:modify", function(event) {
+		if(event.player.master && event.data && event.type && universe.nouns[event.type]) {
+			var record = universe.nouns[event.type][event.id],
+				notify = {},
+				insert;
+			if(!record) {
+				record = universe.nouns[event.type][event.id] = {};
+				insert = true;
+			} else {
+				insert = false;
+			}
+			Object.assign(record, event.data);
+			if(insert) {
+				collections[event.type].insertOne(record)
+				.catch(generalError);
+			} else {
+				collections[event.type].update({"id":record.id}, {"$set":record})
+				.catch(generalError);
+			}
+			
+			notify.relevant = record.owners || [];
+			if(record.owner) {
+				notify.relevant.push(record.owner);
+			}
+			notify.time = Date.now();
+			notify.modification = event.data;
+			notify.id = event.id;
+			notify.type = event.type;
+			universe.emit("model:modified", notify);
+		}
 	});
 	
 	this.connectPlayer = function(connection) {
@@ -79,7 +137,8 @@ module.exports = function(models, configuration, extensions) {
 	
 	this.currentState = function(player) {
 		console.log("State for Player: " + player.id);
-		return {};
+		var state = {};
+		
 	};
 };
 

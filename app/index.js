@@ -11,7 +11,7 @@
  * @param {Object} [configuration] The configuration. Defaults to default a-configuration require.
  * @param {Object} [log] What to use for the log factors. Defaults to console.
  */
-module.exports = function(models, configuration, extensions, log) {
+module.exports = function(configuration, models, handlers, log) {
 	var Universe = require("./universe"),
 		WebSocket = require("ws"),
 		URL = require("url").URL,
@@ -29,7 +29,7 @@ module.exports = function(models, configuration, extensions, log) {
 		configuration = require("a-configuration");
 	}
 	log = log || configuration.log || console;
-	universe = new Universe(models, configuration, extensions);
+	universe = new Universe(configuration, models, handlers);
 	universe.on("error", function(event) {
 		log.error(event);
 	});
@@ -114,7 +114,9 @@ module.exports = function(models, configuration, extensions, log) {
 var configuration = require("a-configuration");
 configuration._await
 .then(function() {
-	var models = [];
+	var handlers = [],
+		models = [];
+	
 	models.push({
 		"type": "test",
 		"Model": function(details) {
@@ -126,7 +128,7 @@ configuration._await
 		}
 	});
 	
-	new module.exports(models, configuration);
+	new module.exports(configuration, models, handlers);
 }).catch(function(err) {
 	console.log("Err: ", err);
 });

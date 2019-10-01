@@ -19,8 +19,8 @@ var EventEmitter = require("events").EventEmitter,
 
 module.exports = function(universe, details) {
 	var connections = [],
-		player = this,
 		standardEvents,
+		player = this,
 		masterEvents,
 		globalEvents,
 		listeners,
@@ -101,10 +101,10 @@ module.exports = function(universe, details) {
 		};
 		
 		var state = {
-			"type": "world:state",
-			"master": master,
 			"event": universe.currentState(player),
-			"sent": Date.now()
+			"type": "world:state",
+			"sent": Date.now(),
+			"master": master
 		};
 		
 		universe.emit("player:connected", player);
