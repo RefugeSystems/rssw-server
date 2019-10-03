@@ -4,7 +4,7 @@ var root = require("root-require")("package.json");
 var defaults = {
 	"name": root.name,
 	"streams": [{
-		"path": "./test.log",
+		"path": "./logs/test.log",
 		"level": "debug",
 		"type": "rotating-file"
 	}]
