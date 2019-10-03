@@ -42,6 +42,7 @@ module.exports = function(universe, details) {
 	this.connect = function(socket) {
 		player.last = Date.now();
 		connections.push(socket);
+		player.connections++;
 		var buffer,
 			cache;
 
@@ -64,14 +65,14 @@ module.exports = function(universe, details) {
 			setTimeout(function() {
 				player.last = Date.now();
 				try {
-					world.emit(message.eventType, message);
+					universe.emit(message.eventType, message);
 				} catch(violation) {
 					var event = {
 						"received": Date.now(),
 						"error": violation,
 						"cause": message
 					};
-					world.emit("error", event);
+					this.emit("error", event);
 				}
 			});
 		};
@@ -89,7 +90,7 @@ module.exports = function(universe, details) {
 			event.event = event;
 			
 			setTimeout(function() {
-				world.emit("error", event);
+				universe.emit("disconnected", event);
 			});
 		};
 		
@@ -102,7 +103,7 @@ module.exports = function(universe, details) {
 			event.signal = "error";
 			event.player = player;
 			setTimeout(function() {
-				world.emit("error", event);
+				universe.emit("error", event);
 			});
 		};
 		
@@ -110,7 +111,7 @@ module.exports = function(universe, details) {
 			"event": universe.currentState(player),
 			"type": "world:state",
 			"sent": Date.now(),
-			"master": master
+			"master": player.master
 		};
 		
 		universe.emit("player:connected", player);

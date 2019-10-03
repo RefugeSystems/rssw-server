@@ -12,6 +12,7 @@
  * @param {Object} [log] What to use for the log factors. Defaults to console.
  */
 module.exports = function(configuration, models, handlers, log) {
+	require("./extensions/array.js");
 	var Universe = require("./universe"),
 		WebSocket = require("ws"),
 		URL = require("url").URL,
@@ -48,6 +49,7 @@ module.exports = function(configuration, models, handlers, log) {
 	
 	options.noServer = true;
 	handler = new WebSocket.Server(options);
+	// This is essentially an extra bounce, can be moved to a direct Universe connection or at least out of the core server initialization for clarity
 	handler.on("connection", function(connection, request) {
 		log.info({
 			"user": connection.user,
@@ -59,26 +61,28 @@ module.exports = function(configuration, models, handlers, log) {
 		connection.host = request.ip;
 		
 		if(request.session) {
+			connection.username = request.session.username;
 			connection.name = request.session.name;
-			connection.user = request.session.user;
+			connection.id = request.session.id;
 		} else {
+			connection.username = request.url.searchParams.get("username");
 			connection.name = request.url.searchParams.get("name");
-			connection.user = request.url.searchParams.get("user");
+			connection.id= request.url.searchParams.get("id");
 		}
 		
-		console.log("Registering Client: ", connection.session);
+//		console.log("Registering Client: ", connection.session);
 		universe.connectPlayer(connection);
 	});
 	
 	server.on("upgrade", function(request, socket, head) {
 		request.url = new URL("http://self" + request.url);
-		console.log("Upgrade URL: ", request.url);
+//		console.log("Upgrade URL: ", request.url);
 	
 		if(request.url.pathname === "/connect") {
 			request.query = request.url.query; // This doesn't appear to be handled by WS
 			request.path = request.url.pathname;
 			
-			console.log("Verifying Client: ", request.query);
+//			console.log("Verifying Client: ", request.query);
 			if(configuration.sessions && configuration.sessions.verify) {
 				configuration.sessions.verify(request)
 				.then(function(session) {
@@ -114,18 +118,44 @@ module.exports = function(configuration, models, handlers, log) {
 var configuration = require("a-configuration");
 configuration._await
 .then(function() {
-	var handlers = [],
+	var messageHandler,
+		playerHandler,
+		nounHandler,
+		
+		handlers = [],
 		models = [];
 	
 	models.push({
-		"type": "test",
+		"type": "entity",
 		"Model": function(details) {
 			Object.assign(this, details);
-			
-			this.update = function(delta) {
-				
-			};
 		}
+	}, {
+		"type": "effect",
+		"Model": function(details) {
+			Object.assign(this, details);
+		}
+	}, {
+		"type": "item",
+		"Model": function(details) {
+			Object.assign(this, details);
+		}
+	}, {
+		"type": "ability",
+		"Model": function(details) {
+			Object.assign(this, details);
+		}
+	}, {
+		"type": "location",
+		"Model": function(details) {
+			Object.assign(this, details);
+		}
+	});
+	
+	playerHandler = require("./handlers/player/processor");
+	handlers.push({
+		"events": ["player:create:player"],
+		"process": playerHandler.creation
 	});
 	
 	new module.exports(configuration, models, handlers);

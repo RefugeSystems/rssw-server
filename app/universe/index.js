@@ -26,6 +26,7 @@ module.exports = function(configuration, models, handlers) {
 		modeling = {},
 		players = {},
 		generalError,
+		loaded = [],
 		loading,
 		db,
 		x;
@@ -46,19 +47,21 @@ module.exports = function(configuration, models, handlers) {
 	
 	loading = collections.player.find().toArray();
 	loading = loading.then(function(buffer) {
-		console.log(" - Loading Players");
+		nouns.player = {};
 		for(x=0; x<buffer.length; x++) {
-			players[buffer.id] = new Player(universe, buffer[x]);
+			players[buffer[x].id] = new Player(universe, buffer[x]);
+			nouns.player[buffer[x].id] = players[buffer[x].id];
 		}
 		return collections[models[0].type].find().toArray();
 	});
 	models.forEach(function(load, i) {
 		modeling[load.type] = load;
 		loading = loading.then(function(buffer) {
-			console.log(" - Loading " + load.type);
 			nouns[load.type] = {};
 			for(x=0; x<buffer.length; x++) {
 				nouns[load.type][buffer[x].id] = new load.Model(buffer[x]);
+				nouns[load.type][buffer[x].id]._type = load.type;
+				loaded.push(nouns[load.type][buffer[x].id]);
 			}
 			i = i + 1;
 			if(i < models.length) {
@@ -72,17 +75,19 @@ module.exports = function(configuration, models, handlers) {
 		});
 	}).then(function() {
 		handlers.forEach(function(handler) {
-			universe.on(handler.event, function(event) {
-				try {
-					handler.process(universe, event);
-				} catch(error) {
-					universe.emit("error", {
-						"message": "Event handling error",
-						"event_type": handler.event,
-						"time": Date.now(),
-						"error": error
-					});
-				}
+			handler.events.forEach(function(eventType) {
+				universe.on(eventType, function(event) {
+					try {
+						handler.process(universe, event);
+					} catch(error) {
+						universe.emit("error", {
+							"message": "Event handling error",
+							"event_type": eventType,
+							"time": Date.now(),
+							"error": error
+						});
+					}
+				});
 			});
 		});
 	}).catch(function(err) {
@@ -93,8 +98,15 @@ module.exports = function(configuration, models, handlers) {
 		});
 	});
 	
+	var allowedToModify = function(event) {
+		return event.data && event.type && universe.nouns[event.type] && 
+			(event.player.master || // Master
+					universe.nouns[event.type][event.id].owner === event.player.id || // Owning Player
+					(universe.nouns[event.type][event.id].owners && universe.nouns[event.type][event.id].owners.indexOf(event.player.id) !== -1)); // One of many owners
+	};
+	
 	universe.on("player:model:modify", function(event) {
-		if(event.player.master && event.data && event.type && universe.nouns[event.type]) {
+		if(allowedToModify(event)) {
 			var record = universe.nouns[event.type][event.id],
 				notify = {},
 				insert;
@@ -105,6 +117,7 @@ module.exports = function(configuration, models, handlers) {
 				insert = false;
 			}
 			Object.assign(record, event.data);
+			record._last = Date.now();
 			if(insert) {
 				collections[event.type].insertOne(record)
 				.catch(generalError);
@@ -126,19 +139,31 @@ module.exports = function(configuration, models, handlers) {
 	});
 	
 	this.connectPlayer = function(connection) {
-		if(players[connection.user]) {
-			console.log("Connection for " + connection.user);
-			players[connection.user].connect(connection);
+		var player = players[connection.id];
+		if(player) {
+			console.log("Connection for " + connection.username, player);
+			player.connect(connection);
 		} else {
-			console.log("Player Doesn't Exist[" + connection.user + "]: ", players[connection.user]);
+			console.log("Player Doesn't Exist[" + connection.id + "]: ", players[connection.username]);
 			closeSocket(connection, configuration.codes.noplayer);
 		}
 	};
 	
-	this.currentState = function(player) {
-		console.log("State for Player: " + player.id);
-		var state = {};
+	/**
+	 * 
+	 * @method currentState
+	 * @param {Player} [player] The player to which this update is relevant if any
+	 * @param {Number} [mark] The timestamp from which the state should be retrieved
+	 */
+	this.currentState = function(player, mark) {
+		mark = mark || 0;
+		console.log("Nouns: ", nouns);
+		return nouns; // TODO: Finish implementation for pruning
 		
+		var state;
+		if(!player && !mark) {
+			return nouns;
+		}
 	};
 };
 
