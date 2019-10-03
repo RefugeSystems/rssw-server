@@ -18,6 +18,10 @@ var EventEmitter = require("events").EventEmitter,
 	];
 
 module.exports = function(universe, details) {
+	this.connections = 0;
+	this.leaves = 0;
+	this.last = 0;
+	
 	var connections = [],
 		standardEvents,
 		player = this,
@@ -62,29 +66,30 @@ module.exports = function(universe, details) {
 				try {
 					world.emit(message.eventType, message);
 				} catch(violation) {
-					world.emit("world:anomaly:violation", violation);
-					console.log("Player Access Violation: ", violation);
+					var event = {
+						"received": Date.now(),
+						"error": violation,
+						"cause": message
+					};
+					world.emit("error", event);
 				}
 			});
 		};
 		
 		socket.onclose = function(event) {
 			connections.purge(socket);
-			player.leaves++;
 			player.connections--;
+			player.leaves++;
+			
 			var event = {};
 			event.message = event.message;
+			event.received = Date.now();
 			event.signal = "close";
 			event.player = player;
 			event.event = event;
-			if(player.connections === 0 && player.listening) {
-				Object.keys(listeners).forEach(function(event) {
-					world.removeListener(event, listeners[event]);
-				});
-				player.listening = false;
-			}
+			
 			setTimeout(function() {
-				world.emit("player:disconnected", event);
+				world.emit("error", event);
 			});
 		};
 		
@@ -93,10 +98,11 @@ module.exports = function(universe, details) {
 			
 			var event = {};
 			event.message = error.message;
+			event.received = Date.now();
 			event.signal = "error";
 			event.player = player;
 			setTimeout(function() {
-				world.emit("player:disconnected", event);
+				world.emit("error", event);
 			});
 		};
 		
