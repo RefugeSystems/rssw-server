@@ -5,3 +5,4 @@
  */
 
 module.exports.player = require("./player/processor");
+module.exports.logging = require("./system/logging");

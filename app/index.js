@@ -154,8 +154,8 @@ configuration._await
 	
 	playerHandler = require("./handlers/player/processor");
 	handlers.push({
-		"events": ["player:create:player"],
-		"process": playerHandler.creation
+		"events": ["player:modify:player"],
+		"process": playerHandler.modify
 	});
 	
 	new module.exports(configuration, models, handlers);

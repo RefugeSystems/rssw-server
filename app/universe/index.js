@@ -19,9 +19,10 @@ closeSocket = function(connection, conf) {
  */
 module.exports = function(configuration, models, handlers) {
 	this.setMaxListeners(200);
-	var Player = require("../handlers/player/channel"),
+	var LogHandler = require("../handlers/system/logging"),
+		Player = require("../handlers/player/channel"),
+		collections = this.collections = {},
 		nouns = this.nouns = {},
-		collections = {},
 		universe = this,
 		modeling = {},
 		players = {},
@@ -31,6 +32,8 @@ module.exports = function(configuration, models, handlers) {
 		db,
 		x;
 
+	this.loggingHandler = new LogHandler(this);
+	
 	generalError = function(exception, message) {
 		universe.emit("error", {
 			"message": message || "General Error",

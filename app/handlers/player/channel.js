@@ -123,12 +123,12 @@ module.exports = function(universe, details) {
 	 * @method send
 	 * @param {Object} event
 	 */
-	this.send = function(event) {
+	var send = this.send = function(event) {
 		event.sent = Date.now();
 		var data = JSON.stringify(event);
-		for(var x=0; x<sockets.length; x++) {
-			console.log("Sending... " + event.type);
-			sockets[x].send(data);
+		for(var x=0; x<connections.length; x++) {
+			console.log("Sending... ", event);
+			connections[x].send(data);
 		}
 	};
 	
