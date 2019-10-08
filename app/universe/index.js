@@ -21,6 +21,7 @@ module.exports = function(configuration, models, handlers) {
 	this.setMaxListeners(200);
 	var LogHandler = require("../handlers/system/logging"),
 		Player = require("../handlers/player/channel"),
+		constructor = this.constructor = {},
 		collections = this.collections = {},
 		nouns = this.nouns = {},
 		universe = this,
@@ -33,6 +34,7 @@ module.exports = function(configuration, models, handlers) {
 		x;
 
 	this.loggingHandler = new LogHandler(this);
+	constructor.player = Player;
 	
 	generalError = function(exception, message) {
 		universe.emit("error", {
@@ -87,6 +89,7 @@ module.exports = function(configuration, models, handlers) {
 							"message": "Event handling error",
 							"event_type": eventType,
 							"time": Date.now(),
+							"event": event,
 							"error": error
 						});
 					}
@@ -141,13 +144,17 @@ module.exports = function(configuration, models, handlers) {
 		}
 	});
 	
+	/**
+	 * 
+	 * 
+	 */
 	this.connectPlayer = function(connection) {
-		var player = players[connection.id];
+		var player = nouns.player[connection.id];
 		if(player) {
 			console.log("Connection for " + connection.username, player);
 			player.connect(connection);
 		} else {
-			console.log("Player Doesn't Exist[" + connection.id + "]: ", players[connection.username]);
+			console.log("Player Doesn't Exist[" + connection.id + "]: ", Object.keys(nouns.player));
 			closeSocket(connection, configuration.codes.noplayer);
 		}
 	};

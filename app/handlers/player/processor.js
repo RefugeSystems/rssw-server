@@ -19,7 +19,7 @@ module.exports.modify = function(universe, event) {
 			Object.assign(universe.nouns.player[event.data.id], event.data);
 			universe.collections.player.updateOne({"id":event.data.id}, {"$set":event.data});
 		} else {
-			universe.nouns.player[event.data.id] = event.data;
+			universe.nouns.player[event.data.id] = new universe.constructor.player(universe, event.data);
 			universe.nouns.player[event.data.id].connections = 0;
 			universe.nouns.player[event.data.id].leaves = 0;
 			universe.nouns.player[event.data.id].last = 0;
