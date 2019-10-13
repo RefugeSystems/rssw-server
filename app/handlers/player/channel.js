@@ -66,6 +66,7 @@ module.exports = function(universe, details) {
 				player.last = Date.now();
 				try {
 					universe.emit(message.eventType, message);
+					console.log("Player Message Emitted");
 				} catch(violation) {
 					var event = {
 						"received": Date.now(),
@@ -166,7 +167,7 @@ module.exports = function(universe, details) {
 				send({
 					"classification": "standard",
 					"emitted": event.emitted,
-					"event": event.data,
+					"event": event,
 					"echo": event.echo,
 					"sent": Date.now(),
 					"type": eventType
@@ -181,7 +182,7 @@ module.exports = function(universe, details) {
 				send({
 					"classification": "master",
 					"emitted": event.emitted,
-					"event": event.data,
+					"event": event,
 					"echo": event.echo,
 					"sent": Date.now(),
 					"type": eventType
@@ -195,7 +196,7 @@ module.exports = function(universe, details) {
 			send({
 				"classification": "global",
 				"emitted": event.emitted,
-				"event": event.data,
+				"event": event,
 				"echo": event.echo,
 				"sent": Date.now(),
 				"type": eventType

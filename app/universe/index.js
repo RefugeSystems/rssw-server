@@ -1,4 +1,5 @@
 var EventEmitter = require("events").EventEmitter,
+	Handlers = require("../handlers"),
 	Random = require("rs-random"),
 	util = require("util"),
 	closeSocket;
@@ -33,10 +34,15 @@ module.exports = function(configuration, models, handlers) {
 		db,
 		x;
 
+	// Standard Handling
 	this.loggingHandler = new LogHandler(this);
 	constructor.player = Player;
+	handlers.push({
+		"events": ["player:modify:player"],
+		"process": Handlers.player.modify
+	});
 	
-	generalError = function(exception, message) {
+	this.generalError = generalError = function(exception, message) {
 		universe.emit("error", {
 			"message": message || "General Error",
 			"time": Date.now(),
@@ -60,7 +66,9 @@ module.exports = function(configuration, models, handlers) {
 		return collections[models[0].type].find().toArray();
 	});
 	models.forEach(function(load, i) {
+		constructor[load.type] = load.Model;
 		modeling[load.type] = load;
+		
 		loading = loading.then(function(buffer) {
 			nouns[load.type] = {};
 			for(x=0; x<buffer.length; x++) {
@@ -111,24 +119,29 @@ module.exports = function(configuration, models, handlers) {
 					(universe.nouns[event.type][event.id].owners && universe.nouns[event.type][event.id].owners.indexOf(event.player.id) !== -1)); // One of many owners
 	};
 	
-	universe.on("player:model:modify", function(event) {
+	/*
+	universe.on("player:modify:entity", function(event) {
+		console.log("Player Message Received: ", event);
 		if(allowedToModify(event)) {
-			var record = universe.nouns[event.type][event.id],
+			var model = event.data;
+			console.log("Allowed");
+			
+			var record = universe.nouns[model._type][model.id],
 				notify = {},
 				insert;
 			if(!record) {
-				record = universe.nouns[event.type][event.id] = {};
+				record = universe.nouns[model._type][model.id] = {};
 				insert = true;
 			} else {
 				insert = false;
 			}
-			Object.assign(record, event.data);
+			Object.assign(record, model);
 			record._last = Date.now();
 			if(insert) {
 				collections[event.type].insertOne(record)
 				.catch(generalError);
 			} else {
-				collections[event.type].update({"id":record.id}, {"$set":record})
+				collections[event.type].updateOne({"id":record.id}, {"$set":record})
 				.catch(generalError);
 			}
 			
@@ -137,12 +150,16 @@ module.exports = function(configuration, models, handlers) {
 				notify.relevant.push(record.owner);
 			}
 			notify.time = Date.now();
-			notify.modification = event.data;
-			notify.id = event.id;
-			notify.type = event.type;
+			notify.modification = model;
+			notify.id = model.id;
+			notify.type = model._type;
+			notify.event = 
+			
 			universe.emit("model:modified", notify);
 		}
+		console.log("Processed");
 	});
+	*/
 	
 	/**
 	 * 

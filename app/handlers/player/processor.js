@@ -25,11 +25,14 @@ module.exports.modify = function(universe, event) {
 			universe.nouns.player[event.data.id].last = 0;
 			universe.collections.player.insertOne(universe.nouns.player[event.data.id]);
 		}
-		universe.emit("model:modified", {
-			"data": universe.nouns.player[event.data.id],
-			"emitted": Date.now(),
-			"echo": event.echo
-		});
+		
+		var notify = {};
+		notify.time = Date.now();
+		notify.modification = event.data;
+		notify.id = event.data.id;
+		notify.type = event.data._type;
+		
+		universe.emit("model:modified", notify);
 	} else {
 		console.log("Unable to create player, no ID found");
 	}

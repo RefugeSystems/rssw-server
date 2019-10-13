@@ -118,45 +118,31 @@ module.exports = function(configuration, models, handlers, log) {
 var configuration = require("a-configuration");
 configuration._await
 .then(function() {
-	var messageHandler,
+	var utilityHandler = require("./handlers/utility"),
+		messageHandler,
 		playerHandler,
 		nounHandler,
 		
 		handlers = [],
 		models = [];
 	
-	models.push({
-		"type": "entity",
-		"Model": function(details) {
-			Object.assign(this, details);
-		}
-	}, {
-		"type": "effect",
-		"Model": function(details) {
-			Object.assign(this, details);
-		}
-	}, {
-		"type": "item",
-		"Model": function(details) {
-			Object.assign(this, details);
-		}
-	}, {
-		"type": "ability",
-		"Model": function(details) {
-			Object.assign(this, details);
-		}
-	}, {
-		"type": "location",
-		"Model": function(details) {
-			Object.assign(this, details);
-		}
-	});
-	
-	playerHandler = require("./handlers/player/processor");
-	handlers.push({
-		"events": ["player:modify:player"],
-		"process": playerHandler.modify
-	});
+	utilityHandler.registerNoun("modifierattrs", models, handlers);
+	utilityHandler.registerNoun("modifierstats", models, handlers);
+	utilityHandler.registerNoun("archetype", models, handlers);
+	utilityHandler.registerNoun("inventory", models, handlers);
+	utilityHandler.registerNoun("loglevel", models, handlers);
+	utilityHandler.registerNoun("location", models, handlers);
+	utilityHandler.registerNoun("loadout", models, handlers);
+	utilityHandler.registerNoun("history", models, handlers);
+	utilityHandler.registerNoun("ability", models, handlers);
+	utilityHandler.registerNoun("entity", models, handlers);
+	utilityHandler.registerNoun("effect", models, handlers);
+	utilityHandler.registerNoun("party", models, handlers);
+	utilityHandler.registerNoun("skill", models, handlers);
+	utilityHandler.registerNoun("note", models, handlers);
+	utilityHandler.registerNoun("book", models, handlers);
+	utilityHandler.registerNoun("item", models, handlers);
+	utilityHandler.registerNoun("race", models, handlers);
 	
 	new module.exports(configuration, models, handlers);
 }).catch(function(err) {
