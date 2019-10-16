@@ -23,7 +23,7 @@ var allowedToModify = function(universe, event) {
 	
 	if(event && event.data && event.type && event.data && event.data.id && event.data._type) {
 		var noun = universe.nouns[event.data._type][event.data.id];
-		return noun.owner === event.player.id || (noun.owners && noun.owners.indexOf(event.player.id) !== -1);
+		return noun.publicModification || noun.owner === event.player.id || (noun.owners && noun.owners.indexOf(event.player.id) !== -1);
 	} else {
 		console.log("Missing information for data modification");
 		return false;

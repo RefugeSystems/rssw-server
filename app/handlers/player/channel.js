@@ -12,6 +12,7 @@ var EventEmitter = require("events").EventEmitter,
 	keys = [
 		"username",
 		"master",
+		"entity",
 		"email",
 		"name",
 		"id"
