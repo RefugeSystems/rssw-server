@@ -130,6 +130,7 @@ configuration._await
 	utilityHandler.registerNoun("modifierstats", models, handlers);
 	utilityHandler.registerNoun("archetype", models, handlers);
 	utilityHandler.registerNoun("inventory", models, handlers);
+	utilityHandler.registerNoun("knowledge", models, handlers);
 	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
 	utilityHandler.registerNoun("loadout", models, handlers);
@@ -137,6 +138,7 @@ configuration._await
 	utilityHandler.registerNoun("ability", models, handlers);
 	utilityHandler.registerNoun("entity", models, handlers);
 	utilityHandler.registerNoun("effect", models, handlers);
+	utilityHandler.registerNoun("planet", models, handlers);
 	utilityHandler.registerNoun("party", models, handlers);
 	utilityHandler.registerNoun("skill", models, handlers);
 	utilityHandler.registerNoun("note", models, handlers);

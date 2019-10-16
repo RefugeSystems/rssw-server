@@ -17,10 +17,17 @@ module.exports.generalPermission = function(event) {
 
 
 var allowedToModify = function(universe, event) {
-	return event && event.data && event.type && universe.nouns[event.type] && 
-		(event.player.master || // Master
-				universe.nouns[event.type][event.id].owner === event.player.id || // Owning Player
-				(universe.nouns[event.type][event.id].owners && universe.nouns[event.type][event.id].owners.indexOf(event.player.id) !== -1)); // One of many owners
+	if(event.player.master) {
+		return true;
+	}
+	
+	if(event && event.data && event.type && event.data && event.data.id && event.data._type) {
+		var noun = universe.nouns[event.data._type][event.data.id];
+		return noun.owner === event.player.id || (noun.owners && noun.owners.indexOf(event.player.id) !== -1);
+	} else {
+		console.log("Missing information for data modification");
+		return false;
+	}
 };
 
 /**
