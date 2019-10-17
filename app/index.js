@@ -42,7 +42,7 @@ module.exports = function(configuration, models, handlers, log) {
 		options.ca = fs.readFileSync(configuration.server.interm || configuration.server.certificateAuthority || configuration.server.ca, "utf-8");
 		options.cert = fs.readFileSync(configuration.server.certificate || configuration.server.crt || configuration.server.public, "utf-8");
 		options.key = fs.readFileSync(configuration.server.privateKey || configuration.server.key || configuration.server.private, "utf-8");
-		server = HTTPS.createServer(options, app);
+		server = HTTPS.createServer(options);
 	} else {
 		server = HTTP.createServer();
 	}
