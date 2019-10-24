@@ -4,7 +4,6 @@ var EventEmitter = require("events").EventEmitter,
 	util = require("util"),
 	closeSocket;
 
-
 closeSocket = function(connection, conf) {
 	connection.close(conf.code, conf.reacon);
 };

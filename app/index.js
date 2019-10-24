@@ -131,6 +131,7 @@ configuration._await
 	utilityHandler.registerNoun("archetype", models, handlers);
 	utilityHandler.registerNoun("inventory", models, handlers);
 	utilityHandler.registerNoun("knowledge", models, handlers);
+	utilityHandler.registerNoun("condition", models, handlers);
 	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
 	utilityHandler.registerNoun("loadout", models, handlers);
