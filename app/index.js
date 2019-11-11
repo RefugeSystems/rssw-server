@@ -119,6 +119,7 @@ var configuration = require("a-configuration");
 configuration._await
 .then(function() {
 	var utilityHandler = require("./handlers/utility"),
+		itemHandler = require("./handlers/items/exchange"),
 		messageHandler,
 		playerHandler,
 		nounHandler,
@@ -146,6 +147,9 @@ configuration._await
 	utilityHandler.registerNoun("book", models, handlers);
 	utilityHandler.registerNoun("item", models, handlers);
 	utilityHandler.registerNoun("race", models, handlers);
+
+	handlers.push(itemHandler.give);
+	handlers.push(itemHandler.take);
 	
 	handlers.push({
 		"events": ["player:create:self"],
@@ -160,6 +164,9 @@ configuration._await
 				universe.collections.player.updateOne({"id":event.player.id}, {"$set":{"entity":event.data.id}})
 				.then(function() {
 					return universe.collections.entity.insertOne(event.data);
+				})
+				.then(function() {
+					universe.nouns.entity[event.data.id] = event.data;
 				})
 				.then(function() {
 					var notify;
