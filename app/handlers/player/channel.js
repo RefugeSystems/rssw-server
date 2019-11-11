@@ -61,13 +61,13 @@ module.exports = function(universe, details) {
 				"sent": parseInt(message.sent)
 			};
 
-			console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
+//			console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
 			
 			setTimeout(function() {
 				player.last = Date.now();
 				try {
 					universe.emit(message.eventType, message);
-					console.log("Player Message Emitted");
+//					console.log("Player Message Emitted");
 				} catch(violation) {
 					var event = {
 						"received": Date.now(),
@@ -129,13 +129,14 @@ module.exports = function(universe, details) {
 		event.sent = Date.now();
 		var data = JSON.stringify(event);
 		for(var x=0; x<connections.length; x++) {
-			console.log("Sending... ", event);
+//			console.log("Sending... ", event);
 			connections[x].send(data);
 		}
 	};
 	
 	standardEvents = [
 		"model:modified",
+		"model:deleted",
 		"player:whisper"
 	];
 	

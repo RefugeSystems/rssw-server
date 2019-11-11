@@ -23,7 +23,11 @@ var allowedToModify = function(universe, event) {
 	
 	if(event && event.data && event.type && event.data && event.data.id && event.data._type) {
 		var noun = universe.nouns[event.data._type][event.data.id];
-		return noun.publicModification || noun.owner === event.player.id || (noun.owners && noun.owners.indexOf(event.player.id) !== -1);
+		if(noun) {
+			return noun.publicModification || noun.owner === event.player.id || (noun.owners && noun.owners.indexOf(event.player.id) !== -1);
+		} else {
+			return false;
+		}
 	} else {
 		console.log("Missing information for data modification");
 		return false;
@@ -78,11 +82,11 @@ module.exports.modifyHandler = function(noun) {
  */
 module.exports.modifyProcessor = function(universe, event) {
 	if(allowedToModify(universe, event)) {
-		var model = event.data;
-		
-		var record = universe.nouns[model._type][model.id],
+		var model = event.data,
+			record = universe.nouns[model._type][model.id],
 			notify = {},
 			insert;
+		
 		if(!record) {
 			record = universe.nouns[model._type][model.id] = {};
 			insert = true;
@@ -91,6 +95,7 @@ module.exports.modifyProcessor = function(universe, event) {
 		}
 		Object.assign(record, model);
 		record._last = Date.now();
+		delete(record._type);
 		delete(record.echo);
 		delete(record._id);
 		if(insert) {
@@ -100,19 +105,53 @@ module.exports.modifyProcessor = function(universe, event) {
 			universe.collections[model._type].updateOne({"id":record.id}, {"$set":record})
 			.catch(universe.generalError);
 		}
+		console.log("Modify Record: ", record);
 		
 		notify.relevant = record.owners || [];
 		if(record.owner) {
 			notify.relevant.push(record.owner);
 		}
-		notify.time = Date.now();
 		notify.modification = model;
-		notify.id = model.id;
 		notify.type = model._type;
+		notify.time = Date.now();
+		notify.id = model.id;
 		
 		universe.emit("model:modified", notify);
 	} else {
 		console.log("Not allowed to modify: " + JSON.stringify(event, null, 4));
+	}
+};
+
+
+/**
+ * 
+ * @method modifyProcessor
+ * @static
+ * @param {Universe} universe
+ * @param {Object} event
+ */
+module.exports.deleteProcessor = function(universe, event) {
+	if(event.player.master) {
+		var model = event.data,
+			notify = {};
+		
+		model._removed = Date.now();
+		
+		universe.collections._trash.insertOne(model)
+		.then(function() {
+			console.log("Event: ", event);
+			delete(universe.nouns[event.data._type][event.data.id]);
+			return universe.collections[event.data._type].remove({"id":event.data.id});
+		})
+		.catch(universe.generalError);
+		
+		notify.time = Date.now();
+		notify.id = model.id;
+		notify.type = model._type;
+		
+		universe.emit("model:deleted", notify);
+	} else {
+		console.log("Not allowed to delete: " + JSON.stringify(event, null, 4));
 	}
 };
 
@@ -130,6 +169,10 @@ module.exports.registerNoun = function(noun, models, handlers) {
 	handlers.push({
 		"process": module.exports.modifyProcessor,
 		"events": ["player:modify:" + noun]
+	});
+	handlers.push({
+		"process": module.exports.deleteProcessor,
+		"events": ["player:delete:" + noun]
 	});
 };
 

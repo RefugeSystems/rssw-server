@@ -54,6 +54,7 @@ module.exports = function(configuration, models, handlers) {
 	for(x=0; x<models.length; x++) {
 		collections[models[x].type] = db.collection(models[x].type);
 	}
+	collections._trash = db.collection("_trash");
 	
 	loading = collections.player.find().toArray();
 	loading = loading.then(function(buffer) {
@@ -74,6 +75,10 @@ module.exports = function(configuration, models, handlers) {
 				nouns[load.type][buffer[x].id] = new load.Model(buffer[x]);
 				nouns[load.type][buffer[x].id]._type = load.type;
 				loaded.push(nouns[load.type][buffer[x].id]);
+				
+				if(load.type === "archetype") {
+					console.log("Check: ", nouns[load.type][buffer[x].id]);
+				}
 			}
 			i = i + 1;
 			if(i < models.length) {
@@ -118,48 +123,6 @@ module.exports = function(configuration, models, handlers) {
 					(universe.nouns[event.type][event.id].owners && universe.nouns[event.type][event.id].owners.indexOf(event.player.id) !== -1)); // One of many owners
 	};
 	
-	/*
-	universe.on("player:modify:entity", function(event) {
-		console.log("Player Message Received: ", event);
-		if(allowedToModify(event)) {
-			var model = event.data;
-			console.log("Allowed");
-			
-			var record = universe.nouns[model._type][model.id],
-				notify = {},
-				insert;
-			if(!record) {
-				record = universe.nouns[model._type][model.id] = {};
-				insert = true;
-			} else {
-				insert = false;
-			}
-			Object.assign(record, model);
-			record._last = Date.now();
-			if(insert) {
-				collections[event.type].insertOne(record)
-				.catch(generalError);
-			} else {
-				collections[event.type].updateOne({"id":record.id}, {"$set":record})
-				.catch(generalError);
-			}
-			
-			notify.relevant = record.owners || [];
-			if(record.owner) {
-				notify.relevant.push(record.owner);
-			}
-			notify.time = Date.now();
-			notify.modification = model;
-			notify.id = model.id;
-			notify.type = model._type;
-			notify.event = 
-			
-			universe.emit("model:modified", notify);
-		}
-		console.log("Processed");
-	});
-	*/
-	
 	/**
 	 * 
 	 * 
@@ -167,7 +130,7 @@ module.exports = function(configuration, models, handlers) {
 	this.connectPlayer = function(connection) {
 		var player = nouns.player[connection.id];
 		if(player) {
-			console.log("Connection for " + connection.username, player);
+			//console.log("Connection for " + connection.username, player);
 			player.connect(connection);
 		} else {
 			console.log("Player Doesn't Exist[" + connection.id + "]: ", Object.keys(nouns.player));
@@ -183,7 +146,7 @@ module.exports = function(configuration, models, handlers) {
 	 */
 	this.currentState = function(player, mark) {
 		mark = mark || 0;
-		console.log("Nouns: ", nouns);
+		//console.log("Nouns: ", nouns);
 		return nouns; // TODO: Finish implementation for pruning
 		
 		var state;
