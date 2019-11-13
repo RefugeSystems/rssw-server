@@ -159,6 +159,7 @@ configuration._await
 			if(!event.player.entity && event.data.id.indexOf(event.player.id) !== -1 && event.data.id.startsWith("character")) {
 				event.data.owners = [];
 				event.data.owners.push(event.player.id);
+				event.data.classification = "charater";
 				event.player.entity = event.data.id;
 				
 				universe.collections.player.updateOne({"id":event.player.id}, {"$set":{"entity":event.data.id}})
