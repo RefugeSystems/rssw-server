@@ -120,6 +120,7 @@ configuration._await
 .then(function() {
 	var utilityHandler = require("./handlers/utility"),
 		itemHandler = require("./handlers/items/exchange"),
+		characterHandler = require("./handlers/character"),
 		messageHandler,
 		playerHandler,
 		nounHandler,
@@ -148,55 +149,9 @@ configuration._await
 	utilityHandler.registerNoun("item", models, handlers);
 	utilityHandler.registerNoun("race", models, handlers);
 
+	handlers.push(characterHandler.create);
 	handlers.push(itemHandler.give);
 	handlers.push(itemHandler.take);
-	
-	handlers.push({
-		"events": ["player:create:self"],
-		"process": function(universe, event) {
-			console.log("Create Player Entity: ", event);
-			// TODO: Clean Up Data Insertion
-			if(!event.player.entity && event.data.id.indexOf(event.player.id) !== -1 && event.data.id.startsWith("character")) {
-				event.data.owners = [];
-				event.data.owners.push(event.player.id);
-				event.data.classification = "charater";
-				event.player.entity = event.data.id;
-				
-				universe.collections.player.updateOne({"id":event.player.id}, {"$set":{"entity":event.data.id}})
-				.then(function() {
-					return universe.collections.entity.insertOne(event.data);
-				})
-				.then(function() {
-					universe.nouns.entity[event.data.id] = event.data;
-				})
-				.then(function() {
-					var notify;
-
-					// Character Updated
-					notify = {};
-					notify.modification = event.data;
-					notify.type = "entity";
-					notify.time = Date.now();
-					notify.id = event.data.id;
-					universe.emit("model:modified", notify);
-					console.log("Notify Character: ", notify);
-					
-					// Player Updated
-					notify = {};
-					notify.modification = {
-						"entity": event.data.id,
-						"id": event.player.id,
-					};
-					notify.type = "player";
-					notify.time = Date.now();
-					notify.id = event.player.id;
-					universe.emit("model:modified", notify);
-					console.log("Notify Player: ", notify);
-				})
-				.catch(universe.generalError);
-			}
-		}
-	});
 	
 	new module.exports(configuration, models, handlers);
 }).catch(function(err) {

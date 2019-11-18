@@ -76,9 +76,9 @@ module.exports = function(configuration, models, handlers) {
 				nouns[load.type][buffer[x].id]._type = load.type;
 				loaded.push(nouns[load.type][buffer[x].id]);
 				
-				if(load.type === "archetype") {
-					console.log("Check: ", nouns[load.type][buffer[x].id]);
-				}
+//				if(load.type === "archetype") {
+//					console.log("Check: ", nouns[load.type][buffer[x].id]);
+//				}
 			}
 			i = i + 1;
 			if(i < models.length) {
