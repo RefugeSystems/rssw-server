@@ -29,9 +29,16 @@ module.exports = function(configuration, models, handlers) {
 		players = {},
 		generalError,
 		loaded = [],
+		support,
 		loading,
 		db,
 		x;
+	
+	if(configuration.supporting) {
+		console.log("Supported: ", configuration.supporting);
+		support = configuration.mongo.connectDB(configuration.supporting.database);
+		console.log("Support: ", support);
+	}
 
 	// Standard Handling
 	this.loggingHandler = new LogHandler(this);
@@ -68,17 +75,34 @@ module.exports = function(configuration, models, handlers) {
 	models.forEach(function(load, i) {
 		constructor[load.type] = load.Model;
 		modeling[load.type] = load;
-		
+
 		loading = loading.then(function(buffer) {
 			nouns[load.type] = {};
+			
+			// Underlying Data Bases
+			if(support) {
+				return new Promise(function(done, fail) {
+					var col = support.collection(models[i].type);
+					col.find().toArray().then(function(supporting) {
+						console.log("Underlying Load[" + models[i].type + "]: ", supporting.length);
+						for(x=0; x<supporting.length; x++) {
+							console.log("Underlying Load: ", supporting[x]);
+							nouns[load.type][supporting[x].id] = new load.Model(supporting[x]);
+							nouns[load.type][supporting[x].id]._type = load.type;
+							loaded.push(nouns[load.type][supporting[x].id]);
+						}
+						done(buffer);
+					}).catch(fail);
+				});
+			} else {
+				return buffer;
+			}
+		}).then(function(buffer) {
+			// Main Top-Level Data Base
 			for(x=0; x<buffer.length; x++) {
 				nouns[load.type][buffer[x].id] = new load.Model(buffer[x]);
 				nouns[load.type][buffer[x].id]._type = load.type;
 				loaded.push(nouns[load.type][buffer[x].id]);
-				
-//				if(load.type === "archetype") {
-//					console.log("Check: ", nouns[load.type][buffer[x].id]);
-//				}
 			}
 			i = i + 1;
 			if(i < models.length) {

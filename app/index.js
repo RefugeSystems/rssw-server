@@ -142,6 +142,7 @@ configuration._await
 	utilityHandler.registerNoun("entity", models, handlers);
 	utilityHandler.registerNoun("effect", models, handlers);
 	utilityHandler.registerNoun("planet", models, handlers);
+	utilityHandler.registerNoun("image", models, handlers);
 	utilityHandler.registerNoun("party", models, handlers);
 	utilityHandler.registerNoun("skill", models, handlers);
 	utilityHandler.registerNoun("note", models, handlers);

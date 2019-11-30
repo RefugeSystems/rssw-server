@@ -52,7 +52,13 @@ module.exports.modifyHandler = function(noun) {
 			
 			if(universe.nouns[noun][event.data.id]) {
 				Object.assign(universe.nouns[noun][event.data.id], event.data);
-				universe.collections[noun].updateOne({"id":event.data.id}, {"$set":event.data});
+				universe.collections[noun].updateOne({"id":event.data.id}, {"$set":event.data})
+				.then(function(res) {
+					console.log("Update Res: ", res);
+					if(res.matchedCount === 0) {
+						universe.collections[noun].insertOne(universe.nouns[noun][event.data.id]);
+					}
+				})
 			} else {
 				if(universe.constructor[noun]) {
 					universe.nouns[noun][event.data.id] = new universe.constructor[noun](universe, event.data);
@@ -103,6 +109,12 @@ module.exports.modifyProcessor = function(universe, event) {
 			.catch(universe.generalError);
 		} else {
 			universe.collections[model._type].updateOne({"id":record.id}, {"$set":record})
+			.then(function(res) {
+				// Create new record for things loaded from below
+				if(res.result.nModified === 0) {
+					universe.collections[model._type].insertOne(record);
+				}
+			})
 			.catch(universe.generalError);
 		}
 		console.log("Modify Record: ", record);
