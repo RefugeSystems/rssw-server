@@ -84,9 +84,7 @@ module.exports = function(configuration, models, handlers) {
 				return new Promise(function(done, fail) {
 					var col = support.collection(models[i].type);
 					col.find().toArray().then(function(supporting) {
-						console.log("Underlying Load[" + models[i].type + "]: ", supporting.length);
 						for(x=0; x<supporting.length; x++) {
-							console.log("Underlying Load: ", supporting[x]);
 							nouns[load.type][supporting[x].id] = new load.Model(supporting[x]);
 							nouns[load.type][supporting[x].id]._type = load.type;
 							loaded.push(nouns[load.type][supporting[x].id]);

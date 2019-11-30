@@ -117,7 +117,7 @@ module.exports.modifyProcessor = function(universe, event) {
 			})
 			.catch(universe.generalError);
 		}
-		console.log("Modify Record: ", record);
+//		console.log("Modify Record: ", record);
 		
 		notify.relevant = record.owners || [];
 		if(record.owner) {
