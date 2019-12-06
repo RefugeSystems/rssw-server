@@ -136,8 +136,9 @@ module.exports = function(universe, details) {
 	
 	standardEvents = [
 		"model:modified",
+		"player:whisper",
 		"model:deleted",
-		"player:whisper"
+		"control",
 	];
 	
 	masterEvents = [

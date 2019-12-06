@@ -121,6 +121,7 @@ configuration._await
 	var utilityHandler = require("./handlers/utility"),
 		itemHandler = require("./handlers/items/exchange"),
 		characterHandler = require("./handlers/character"),
+		masterHandlers = require("./handlers/master"),
 		messageHandler,
 		playerHandler,
 		nounHandler,
@@ -151,6 +152,7 @@ configuration._await
 	utilityHandler.registerNoun("race", models, handlers);
 
 	handlers.push(characterHandler.create);
+	handlers.push(masterHandlers.control);
 	handlers.push(itemHandler.give);
 	handlers.push(itemHandler.take);
 	
