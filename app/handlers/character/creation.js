@@ -10,7 +10,7 @@ module.exports = {
 			// Build NPC
 			event.data.id = "entity:npc:" + (event.data.name?event.data.name.replace(spaces, "").toLowerCase():"noname") + ":" + Date.now();
 			event.data.owners = [];
-			event.data.classification = "charater";
+			event.data.classification = "character";
 			event.player.entity = event.data.id;
 			
 			universe.collections.entity.insertOne(event.data)
@@ -35,7 +35,7 @@ module.exports = {
 			// Build Character
 			event.data.owners = [];
 			event.data.owners.push(event.player.id);
-			event.data.classification = "charater";
+			event.data.classification = "character";
 			event.player.entity = event.data.id;
 			
 			universe.collections.player.updateOne({"id":event.player.id}, {"$set":{"entity":event.data.id}})
