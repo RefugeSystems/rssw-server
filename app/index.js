@@ -120,6 +120,7 @@ configuration._await
 .then(function() {
 	var utilityHandler = require("./handlers/utility"),
 		itemHandler = require("./handlers/items/exchange"),
+		roomHandler = require("./handlers/rooms/exchange"),
 		characterHandler = require("./handlers/character"),
 		masterHandlers = require("./handlers/master"),
 		messageHandler,
@@ -150,11 +151,14 @@ configuration._await
 	utilityHandler.registerNoun("book", models, handlers);
 	utilityHandler.registerNoun("item", models, handlers);
 	utilityHandler.registerNoun("race", models, handlers);
+	utilityHandler.registerNoun("room", models, handlers);
 
 	handlers.push(characterHandler.create);
 	handlers.push(masterHandlers.control);
 	handlers.push(itemHandler.give);
 	handlers.push(itemHandler.take);
+	handlers.push(roomHandler.give);
+	handlers.push(roomHandler.take);
 	
 	new module.exports(configuration, models, handlers);
 }).catch(function(err) {

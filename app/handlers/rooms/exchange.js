@@ -10,11 +10,11 @@ var allowedToModify = function(universe, event) {
 
 
 module.exports.give = {
-	"events": ["player:give:item"],
+	"events": ["player:give:room"],
 	"process": function(universe, event) {
 		var inventory = universe.nouns.inventory[event.data.inventory],
 			entityGiving = universe.nouns.entity[event.data.source],
-			item = universe.nouns.item[event.data.item],
+			room = universe.nouns.room[event.data.room],
 			receiving,
 			notify;
 		
@@ -22,79 +22,75 @@ module.exports.give = {
 			receiving._type = "entity";
 		} else if(receiving = universe.nouns.inventory[event.data.target]) {
 			receiving._type = "inventory";
-		} else if(receiving = universe.nouns.item[event.data.target]) {
-			receiving._type = "item";
 		}
 
 		if(!event.player.master && !(entityGiving || inventory)) {
-			console.log("Requires an entity, item, or inventory to give the item: ", event);
+			console.log("Requires an entity or inventory to give the item: ", event);
 		} else {
 			// TODO: Validate source (Entity has it in "item" or inventory has it)
 		}
 
 		if(receiving && !receiving.template && event.player.master) {
-			if(item.template) {
+			if(room.template) {
 				// TODO: Add Randomization
-				item = JSON.parse(JSON.stringify(item));
-				item.id += ":" + receiving.id + Date.now();
-				item._id = undefined;
-				item.template = false;
-				delete(item.template);
-				delete(item._id);
+				room = JSON.parse(JSON.stringify(room));
+				room.id += ":" + receiving.id + Date.now();
+				delete(room.template);
+				delete(room._id);
 	
-				universe.nouns.item[item.id] = item;
-				universe.collections.item.insertOne(item)
+				universe.nouns.room[room.id] = room;
+				universe.collections.room.insertOne(room)
 				.then(function() {
 					notify = {};
-					notify.modification = item;
-					notify.type = "item";
+					notify.modification = room;
+					notify.type = "room";
 					notify.time = Date.now();
-					notify.id = item.id;
+					notify.id = room.id;
 					universe.emit("model:modified", notify);
-					console.log("Item Created: ", item, receiving);
+					console.log("Room Created: ", room, receiving);
 				})
 				.then(function() {
-					if(!receiving.item) {
-						receiving.item = [];
+					if(!receiving.room) {
+						receiving.room = [];
 					}
-					receiving.item.push(item.id);
-					return universe.collections[receiving._type].updateOne({"id":receiving.id}, {"$set":{"item": receiving.item}});
+					receiving.room.push(room.id);
+					return universe.collections[receiving._type].updateOne({"id":receiving.id}, {"$set":{"room": receiving.room}});
 				})
 				.then(function() {
 					notify = {};
-					notify.modification = {"item": receiving.item};
+					notify.modification = {"room": receiving.room};
 					notify.type = receiving._type;
 					notify.time = Date.now();
 					notify.id = receiving.id;
 					universe.emit("model:modified", notify);
-					console.log("Given: ", item, receiving);
+					console.log("Given: ", room, receiving);
 				})
 				.catch(universe.generalError);
 			} else {
-				receiving.item.push(item.id);
-				universe.collections[receiving._type].updateOne({"id":receiving.id}, {"$set":{"item": receiving.item}})
+				receiving.room.push(room.id);
+				universe.collections[receiving._type].updateOne({"id":receiving.id}, {"$set":{"room": receiving.room}})
 				.then(function() {
 					notify = {};
-					notify.modification = {"item": receiving.item};
+					notify.modification = {"room": receiving.room};
 					notify.type = receiving._type;
 					notify.time = Date.now();
 					notify.id = receiving.id;
 					universe.emit("model:modified", notify);
-					console.log("Given: ", item, receiving);
+					console.log("Given: ", room, receiving);
 				})
 				.catch(universe.generalError);
 			}
 		} else {
-			console.log("[!] Not Given: ", item, receiving);
+			console.log("[!] Not Given: ", room, receiving);
 		}
 		
 	}
 };
 
 module.exports.take = {
-	"events": ["player:take:item"],
+	"events": ["player:take:room"],
 	"process": function(universe, event) {
-		var item = universe.nouns.item[event.data.item],
+		var room = universe.nouns.room[event.data.room],
 			notify = -2,
 			target,
 			index,
@@ -104,8 +100,6 @@ module.exports.take = {
 			target._type = "entity";
 		} else if(target = universe.nouns.inventory[event.data.target]) {
 			target._type = "inventory";
-		} else if(target = universe.nouns.item[event.data.target]) {
-			target._type = "item";
 		}
 
 		if(!event.player.master) {
@@ -114,31 +108,31 @@ module.exports.take = {
 			// TODO: Validate source (Entity has it in "item" or inventory has it)
 		}
 
-		if(target && target.item && item && event.player.master) {
-			for(x=0; index === -2 && x<target.item.length; x++) {
-				if(target.item[x].id === item.id) {
+		if(target && target.room && room && event.player.master) {
+			for(x=0; index === -2 && x<target.room.length; x++) {
+				if(target.room[x].id === room.id) {
 					index = x;
 				}
 			}
 			
 			if(index !== -2) {
-				target.item.splice(index, 1);
-				universe.collections[target._type].updateOne({"id":target.id}, {"$set":{"item": target.item}})
+				target.room.splice(index, 1);
+				universe.collections[target._type].updateOne({"id":target.id}, {"$set":{"room": target.room}})
 				.then(function() {
 					notify = {};
-					notify.modification = {"item": target.item};
+					notify.modification = {"room": target.room};
 					notify.type = target._type;
 					notify.time = Date.now();
 					notify.id = target.id;
 					universe.emit("model:modified", notify);
-					console.log("Taken: ", item, target);
+					console.log("Taken: ", room, target);
 				})
 				.catch(universe.generalError);
 			} else {
-				console.log("[!] Not Found to take: ", item, target);
+				console.log("[!] Not Found to take: ", room, target);
 			}
 		} else {
-			console.log("[!] Not Taken: ", item, target);
+			console.log("[!] Not Taken: ", room, target);
 		}
 		
 	}
