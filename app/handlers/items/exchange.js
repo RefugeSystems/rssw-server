@@ -36,6 +36,7 @@ module.exports.give = {
 			if(item.template) {
 				// TODO: Add Randomization
 				item = JSON.parse(JSON.stringify(item));
+				item.source_template = item.id;
 				item.id += ":" + receiving.id + Date.now();
 				item._id = undefined;
 				item.template = false;

@@ -34,6 +34,7 @@ module.exports.give = {
 			if(room.template) {
 				// TODO: Add Randomization
 				room = JSON.parse(JSON.stringify(room));
+				room.source_template = room.id;
 				room.id += ":" + receiving.id + Date.now();
 				delete(room.template);
 				delete(room._id);
