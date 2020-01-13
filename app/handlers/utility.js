@@ -131,6 +131,11 @@ module.exports.modifyProcessor = function(universe, event) {
 		universe.emit("model:modified", notify);
 	} else {
 		console.log("Not allowed to modify: " + JSON.stringify(event, null, 4));
+		universe.emit("error", {
+			"message": "Modification Access Violation",
+			"time": Date.now(),
+			"cause": event
+		});
 	}
 };
 

@@ -147,7 +147,9 @@ module.exports = function(universe, details) {
 	];
 	
 	globalEvents = [
-		"universe:modified"
+		"universe:modified",
+		"universe:error",
+		"error"
 	];
 	
 	listeners = {
