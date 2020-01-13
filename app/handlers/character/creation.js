@@ -8,7 +8,9 @@ module.exports = {
 		// TODO: Clean Up Data Insertion
 		if(event.player.master) {
 			// Build NPC
-			event.data.id = "entity:npc:" + (event.data.name?event.data.name.replace(spaces, "").toLowerCase():"noname") + ":" + Date.now();
+			if(!event.data.id) {
+				event.data.id = "entity:npc:" + (event.data.name?event.data.name.replace(spaces, "").toLowerCase():"noname") + ":" + Date.now();
+			}
 			event.data.owners = [];
 			event.data.classification = "character";
 			event.player.entity = event.data.id;
