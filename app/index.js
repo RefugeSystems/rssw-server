@@ -37,6 +37,9 @@ module.exports = function(configuration, models, handlers, log) {
 	universe.on("online", function(event) {
 		log.info(event);
 	});
+	universe.on("warning", function(event) {
+		log.warn(event);
+	});
 	
 	if(configuration.server.key) {
 		options.ca = fs.readFileSync(configuration.server.interm || configuration.server.certificateAuthority || configuration.server.ca, "utf-8");

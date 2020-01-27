@@ -60,6 +60,10 @@ module.exports.modifyHandler = function(noun) {
 					}
 				})
 			} else {
+				universe.emit("warning", {
+					"message": "Creating Record for modification handler",
+					"event": event
+				});
 				if(universe.constructor[noun]) {
 					universe.nouns[noun][event.data.id] = new universe.constructor[noun](universe, event.data);
 				} else {
