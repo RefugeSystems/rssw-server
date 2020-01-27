@@ -101,7 +101,6 @@ module.exports.modifyProcessor = function(universe, event) {
 		}
 		Object.assign(record, model);
 		record._last = Date.now();
-		delete(record._type);
 		delete(record.echo);
 		delete(record._id);
 		if(insert) {
@@ -194,6 +193,11 @@ module.exports.registerNoun = function(noun, models, handlers) {
 };
 
 
-var GeneralConstructor = function(details) {
+var GeneralConstructor = function(details, loading) {
 	Object.assign(this, details);
+	if(loading) {
+		this._type = loading.type;
+	} else {
+		console.warn("No Loading Specified");
+	}
 };

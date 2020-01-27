@@ -85,7 +85,7 @@ module.exports = function(configuration, models, handlers) {
 					var col = support.collection(models[i].type);
 					col.find().toArray().then(function(supporting) {
 						for(x=0; x<supporting.length; x++) {
-							nouns[load.type][supporting[x].id] = new load.Model(supporting[x]);
+							nouns[load.type][supporting[x].id] = new load.Model(supporting[x], load);
 							nouns[load.type][supporting[x].id]._type = load.type;
 							loaded.push(nouns[load.type][supporting[x].id]);
 						}
@@ -98,7 +98,10 @@ module.exports = function(configuration, models, handlers) {
 		}).then(function(buffer) {
 			// Main Top-Level Data Base
 			for(x=0; x<buffer.length; x++) {
-				nouns[load.type][buffer[x].id] = new load.Model(buffer[x]);
+//				if(buffer[x].id === "character:aetherwalker:galvaakglinder") {
+//					console.log("Galvak:\n", buffer[x]);
+//				}
+				nouns[load.type][buffer[x].id] = new load.Model(buffer[x], load);
 				nouns[load.type][buffer[x].id]._type = load.type;
 				loaded.push(nouns[load.type][buffer[x].id]);
 			}

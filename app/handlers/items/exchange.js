@@ -3,18 +3,93 @@ var allowedToModify = function(universe, event) {
 	if(event.player.master) {
 		return true;
 	}
+	
+	
 
 
 	return false;
 };
 
+var ownsSource = function(parameters) {
+	return new Promise(function(done, fail) {
+		if(parameters.event.player.master) {
+			done(parameters);
+		} else if(parameters.event.player.id === parameters.source.owner || (parameters.source.owners && parameters.source.owners.indexOf(parameters.event.player.id) !== -1) && parameters.source.item.indexOf(parameters.event.data.item) !== -1) {
+			done(parameters);
+		} else {
+			fail({
+				"message": "Event player does not have sufficent rights on source for giving an item",
+				"source": parameters.source,
+				"event": parameters.event
+			});
+		}
+	});
+};
+
+// universe, event, source
+var takeItem = function(parameters) {
+	return new Promise(function(done, fail) {
+		var index = parameters.source.item.indexOf(parameters.event.data.item);
+		if(index !== -1 && parameters.source._type) {
+			parameters.source.item.splice(index, 1);
+			parameters.universe.collections[parameters.source._type].updateOne({"id":parameters.source.id}, {"$set":{"item": parameters.source.item}})
+			.then(function() {
+				notify = {};
+				notify.modification = {"item": parameters.source.item};
+				notify.type = parameters.source._type;
+				notify.time = Date.now();
+				notify.id = parameters.source.id;
+//				parameters.universe.emit("entity:item:loss", {
+//					"item": parameters.event.data.item,
+//					"entity": parameters.source.id
+//				});
+				parameters.universe.emit("model:modified", notify);
+				console.log("Taken: ", parameters.event.data.item, parameters.source);
+				done(parameters);
+			})
+			.catch(fail);
+		} else {
+			fail({
+				"message": "Unable to take item due to insufficent information or missing item",
+				"target": parameters.source,
+				"event": parameters.event,
+				"index": index
+			});
+		}
+	});
+};
+
+//universe, event, receiving
+var giveItem = function(parameters) {
+	return new Promise(function(done, fail) {
+		parameters.receiving.item.push(parameters.event.data.item);
+		parameters.universe.collections[parameters.receiving._type].updateOne({"id":parameters.receiving.id}, {"$set":{"item": parameters.receiving.item}})
+		.then(function() {
+			notify = {};
+			notify.modification = {"item": parameters.receiving.item};
+			notify.type = parameters.receiving._type;
+			notify.time = Date.now();
+			notify.id = parameters.receiving.id;
+			parameters.universe.emit("model:modified", notify);
+//			parameters.universe.emit("entity:item:gain", {
+//				"item": parameters.event.data.item,
+//				"entity": parameters.receiving.id
+//			});
+			console.log("Given: ", parameters.event.data.item, parameters.receiving);
+			done();
+		})
+		.catch(fail);
+	});
+};
+
+
 
 module.exports.give = {
 	"events": ["player:give:item"],
 	"process": function(universe, event) {
-		var inventory = universe.nouns.inventory[event.data.inventory],
-			entityGiving = universe.nouns.entity[event.data.source],
+		var source = universe.nouns.inventory[event.data.inventory] || universe.nouns.entity[event.data.source],
 			item = universe.nouns.item[event.data.item],
+			parameters = {},
 			receiving,
 			notify;
 		
@@ -26,18 +101,39 @@ module.exports.give = {
 			receiving._type = "item";
 		}
 
-		if(!event.player.master && !(entityGiving || inventory)) {
+		if(!(source)) {
 			console.log("Requires an entity, item, or inventory to give the item: ", event);
 		} else {
 			// TODO: Validate source (Entity has it in "item" or inventory has it)
 		}
 
-		if(receiving && !receiving.template && event.player.master) {
+		parameters.universe = universe;
+		parameters.receiving = receiving;
+		parameters.source = source;
+		parameters.event = event;
+		
+		if(!parameters.receiving.item) {
+			parameters.receiving.item = [];
+		}
+		if(!parameters.source.item) {
+			parameters.source.item = [];
+		}
+		
+		if(source && receiving && !receiving.template && !source.template) {
+			ownsSource(parameters)
+			.then(takeItem)
+			.then(giveItem)
+			.catch(function(fault) {
+				console.error("Failed to give item to target: ", event, "\n\n>> Fault:\n", fault);
+				universe.emit("error", fault);
+			});
+			
+		} else if(receiving && !receiving.template && event.player.master) {
 			if(item.template) {
 				// TODO: Add Randomization
 				item = JSON.parse(JSON.stringify(item));
 				item.source_template = item.id;
-				item.id += ":" + receiving.id + Date.now();
+				item.id += ":" + Date.now();
 				item._id = undefined;
 				item.template = false;
 				delete(item.template);
@@ -96,9 +192,9 @@ module.exports.take = {
 	"events": ["player:take:item"],
 	"process": function(universe, event) {
 		var item = universe.nouns.item[event.data.item],
-			notify = -2,
+			index = -2,
+			notify,
 			target,
-			index,
 			x;
 		
 		if(target = universe.nouns.entity[event.data.target]) {
