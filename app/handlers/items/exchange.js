@@ -115,11 +115,12 @@ module.exports.give = {
 		if(!parameters.receiving.item) {
 			parameters.receiving.item = [];
 		}
-		if(!parameters.source.item) {
-			parameters.source.item = [];
-		}
 		
 		if(source && receiving && !receiving.template && !source.template) {
+			if(!parameters.source.item) {
+				parameters.source.item = [];
+			}
+			
 			ownsSource(parameters)
 			.then(takeItem)
 			.then(giveItem)
