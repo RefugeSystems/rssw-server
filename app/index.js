@@ -132,7 +132,8 @@ configuration._await
 		
 		handlers = [],
 		models = [];
-	
+
+	utilityHandler.registerNoun("classification", models, handlers);
 	utilityHandler.registerNoun("modifierattrs", models, handlers);
 	utilityHandler.registerNoun("modifierstats", models, handlers);
 	utilityHandler.registerNoun("archetype", models, handlers);
