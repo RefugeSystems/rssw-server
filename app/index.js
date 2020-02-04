@@ -142,6 +142,7 @@ configuration._await
 	utilityHandler.registerNoun("condition", models, handlers);
 	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
+	utilityHandler.registerNoun("playlist", models, handlers);
 	utilityHandler.registerNoun("loadout", models, handlers);
 	utilityHandler.registerNoun("history", models, handlers);
 	utilityHandler.registerNoun("ability", models, handlers);
