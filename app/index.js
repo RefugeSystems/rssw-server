@@ -159,6 +159,7 @@ configuration._await
 	utilityHandler.registerNoun("race", models, handlers);
 	utilityHandler.registerNoun("room", models, handlers);
 	utilityHandler.registerNoun("slot", models, handlers);
+	utilityHandler.registerNoun("sex", models, handlers);
 
 	handlers.push(characterHandler.create);
 	handlers.push(masterHandlers.control);
