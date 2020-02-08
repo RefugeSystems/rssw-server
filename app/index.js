@@ -143,13 +143,14 @@ configuration._await
 	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
 	utilityHandler.registerNoun("playlist", models, handlers);
+	utilityHandler.registerNoun("ability", models, handlers);
 	utilityHandler.registerNoun("dataset", models, handlers);
 	utilityHandler.registerNoun("loadout", models, handlers);
 	utilityHandler.registerNoun("history", models, handlers);
-	utilityHandler.registerNoun("ability", models, handlers);
 	utilityHandler.registerNoun("entity", models, handlers);
 	utilityHandler.registerNoun("effect", models, handlers);
 //	utilityHandler.registerNoun("planet", models, handlers);
+	utilityHandler.registerNoun("widget", models, handlers);
 	utilityHandler.registerNoun("image", models, handlers);
 	utilityHandler.registerNoun("party", models, handlers);
 	utilityHandler.registerNoun("skill", models, handlers);

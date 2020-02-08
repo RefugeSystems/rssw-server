@@ -6,6 +6,31 @@
  * @module Handlers
  */
 
+
+
+var maxHistoryLength = 100000,
+	trackedValues = [
+		"location",
+		"credits",
+		"brawn",
+		"agility",
+		"intellect",
+		"cunning",
+		"willpower",
+		"pressence",
+		"wounds",
+		"strain",
+		"shield",
+		"hull",
+		"xp"
+	],
+	trackedArrays = [
+		"archetype",
+		"knowledge",
+		"ability",
+		"item"
+	];
+
 /**
  * 
  * @method generalPermission
@@ -14,7 +39,6 @@
 module.exports.generalPermission = function(event) {
 	return event && event.data && event.data.id && (event.player.master || event.player.id === event.data.id);
 };
-
 
 var allowedToModify = function(universe, event) {
 	if(event.player.master) {
@@ -51,6 +75,77 @@ module.exports.modifyHandler = function(noun) {
 			}
 			
 			if(universe.nouns[noun][event.data.id]) {
+				var record = universe.nouns[noun][event.data.id],
+					model = event.data,
+					keys = [],
+					diffNew,
+					diffOld,
+					diffRes,
+					diff,
+					x,
+					y;
+
+				for(x=0; x<trackedValues.length; x++) {
+					if(record[trackedValues[x]] !== undefined && record[trackedValues[x]] !== null && event.data[trackedValues[x]] !== undefined && event.data[trackedValues[x]] !== record[trackedValues[x]]) {
+						record.history.push({
+							"type": "record_keeping",
+							"modified": trackedValues[x],
+							"previous": record[trackedValues[x]],
+							"current": event.data[trackedValues[x]],
+							"time": Date.now()
+						});
+					}
+				}
+				
+				for(x=0; x<trackedArrays.length; x++) {
+					if(record[trackedArrays[x]] && event.data[trackedArrays[x]] && record[trackedArrays[x]].length !== event.data[trackedArrays[x]].length) {
+						diffNew = {};
+						diffOld = {};
+						diffRes = {};
+						// TODO: Finish adding up IDs and then computing difference
+						
+						for(y=0; y<record[trackedArrays[x]].length; y++) {
+							if(!diffOld[record[trackedArrays[x]][y]]) {
+								diffOld[record[trackedArrays[x]][y]] = 1;
+								keys.push(record[trackedArrays[x]][y]);
+							} else {
+								diffOld[record[trackedArrays[x]][y]]++;
+							}
+						}
+						for(y=0; y<event.data[trackedArrays[x]].length; y++) {
+							if(!diffNew[event.data[trackedArrays[x]][y]]) {
+								diffNew[event.data[trackedArrays[x]][y]] = 1;
+								keys.push(event.data[trackedArrays[x]][y]);
+							} else {
+								diffNew[event.data[trackedArrays[x]][y]]++;
+							}
+						}
+						
+						for(y=0; y<keys.length; y++) {
+							diffRes[keys[y]] = (parseInt(diffNew[keys[y]]) || 0) - (parseInt(diffOld[keys[y]]) || 0);
+							if(diffRes[keys[y]] !== 0) {
+								if(!diff) {
+									diff = {};
+								}
+								diff[keys[y]] = diffRes[keys[y]];
+							}
+						}
+						
+						if(diff) {
+							if(!record.history) {
+								record.history = [];
+							}
+							record.history.push({
+								"type": "record_acquired_or_loss",
+								"modified": trackedArrays[x],
+								"difference": diff,
+								"time": Date.now()
+								// TODO: Session & Universe Time support
+							})
+						}
+					}
+				}
+				
 				Object.assign(universe.nouns[noun][event.data.id], event.data);
 				universe.collections[noun].updateOne({"id":event.data.id}, {"$set":event.data})
 				.then(function(res) {
@@ -95,7 +190,14 @@ module.exports.modifyProcessor = function(universe, event) {
 		var model = event.data,
 			record = universe.nouns[model._type][model.id],
 			notify = {},
-			insert;
+			keys = [],
+			diffNew,
+			diffOld,
+			diffRes,
+			insert,
+			diff,
+			x,
+			y;
 		
 		if(!record) {
 			record = universe.nouns[model._type][model.id] = {};
@@ -103,6 +205,76 @@ module.exports.modifyProcessor = function(universe, event) {
 		} else {
 			insert = false;
 		}
+		
+		if(!record.history) {
+			record.history = [];
+		}
+		for(x=0; x<trackedValues.length; x++) {
+			if(record[trackedValues[x]] !== undefined && record[trackedValues[x]] !== null && event.data[trackedValues[x]] !== undefined && event.data[trackedValues[x]] !== record[trackedValues[x]]) {
+				if(!model.history) {
+					model.history = record.history;
+				}
+				record.history.unshift({
+					"type": "record_keeping",
+					"modified": trackedValues[x],
+					"previous": record[trackedValues[x]],
+					"current": event.data[trackedValues[x]],
+					"time": Date.now()
+				});
+			}
+		}
+		
+		for(x=0; x<trackedArrays.length; x++) {
+			if(record[trackedArrays[x]] && event.data[trackedArrays[x]] && record[trackedArrays[x]].length !== event.data[trackedArrays[x]].length) {
+				diffNew = {};
+				diffOld = {};
+				diffRes = {};
+				// TODO: Finish adding up IDs and then computing difference
+				
+				for(y=0; y<record[trackedArrays[x]].length; y++) {
+					if(!diffOld[record[trackedArrays[x]][y]]) {
+						diffOld[record[trackedArrays[x]][y]] = 1;
+						keys.push(record[trackedArrays[x]][y]);
+					} else {
+						diffOld[record[trackedArrays[x]][y]]++;
+					}
+				}
+				for(y=0; y<event.data[trackedArrays[x]].length; y++) {
+					if(!diffNew[event.data[trackedArrays[x]][y]]) {
+						diffNew[event.data[trackedArrays[x]][y]] = 1;
+						keys.push(event.data[trackedArrays[x]][y]);
+					} else {
+						diffNew[event.data[trackedArrays[x]][y]]++;
+					}
+				}
+				
+				for(y=0; y<keys.length; y++) {
+					diffRes[keys[y]] = (parseInt(diffNew[keys[y]]) || 0) - (parseInt(diffOld[keys[y]]) || 0);
+					if(diffRes[keys[y]] !== 0) {
+						if(!diff) {
+							diff = {};
+						}
+						diff[keys[y]] = diffRes[keys[y]];
+					}
+				}
+				
+				if(diff) {
+					if(!model.history) {
+						model.history = record.history;
+					}
+					record.history.unshift({
+						"type": "record_acquired_or_loss",
+						"modified": trackedArrays[x],
+						"difference": diff,
+						"time": Date.now()
+						// TODO: Session & Universe Time support
+					})
+				}
+			}
+		}
+		
+		record.history.splice(maxHistoryLength);
+		
 		Object.assign(record, model);
 		record._last = Date.now();
 		delete(record.echo);
@@ -204,4 +376,12 @@ var GeneralConstructor = function(details, loading) {
 	} else {
 		console.warn("No Loading Specified");
 	}
+	if(!this.history) {
+		this.history = [];
+	}
+	
+	this.addHistory = function(event) {
+		this.history.unshift(event);
+		this.history.splice(maxHistoryLength);
+	};
 };

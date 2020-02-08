@@ -10,11 +10,39 @@ var allowedToModify = function(universe, event) {
 	return false;
 };
 
+var hasItemInItem = function(parameters) {
+	var hold,
+		x;
+	
+	if((parameters.event.player.id === parameters.source.owner || (parameters.source.owners && parameters.source.owners.indexOf(parameters.event.player.id) !== -1))
+			&& parameters.source.item
+			&& parameters.source.item.length) {
+		for(x=0; x<parameters.source.item.length; x++) {
+			hold = parameters.universe.nouns.item[parameters.source.item[x]];
+			if(hold) {
+				if(hold.item && hold.item.length && hold.item.indexOf(parameters.event.data.item) !== -1) {
+					return hold;
+				}
+			} else {
+				console.warn({
+					"message": "Source has invalid item",
+					"source": parameters.source.id,
+					"item": parameters.source.item[x]
+				});
+			}
+		}
+	}
+	
+	return false;
+};
+
 var ownsSource = function(parameters) {
 	return new Promise(function(done, fail) {
 		if(parameters.event.player.master) {
 			done(parameters);
-		} else if(parameters.event.player.id === parameters.source.owner || (parameters.source.owners && parameters.source.owners.indexOf(parameters.event.player.id) !== -1) && parameters.source.item.indexOf(parameters.event.data.item) !== -1) {
+		} else if((parameters.event.player.id === parameters.source.owner || (parameters.source.owners && parameters.source.owners.indexOf(parameters.event.player.id) !== -1)) && parameters.source.item.indexOf(parameters.event.data.item) !== -1) {
+			done(parameters);
+		} else if(hasItemInItem(parameters)) {
 			done(parameters);
 		} else {
 			fail({
@@ -29,22 +57,57 @@ var ownsSource = function(parameters) {
 // universe, event, source
 var takeItem = function(parameters) {
 	return new Promise(function(done, fail) {
-		var index = parameters.source.item.indexOf(parameters.event.data.item);
+		var index = parameters.source.item.indexOf(parameters.event.data.item),
+			container;
+		
 		if(index !== -1 && parameters.source._type) {
 			parameters.source.item.splice(index, 1);
 			parameters.universe.collections[parameters.source._type].updateOne({"id":parameters.source.id}, {"$set":{"item": parameters.source.item}})
 			.then(function() {
 				notify = {};
-				notify.modification = {"item": parameters.source.item};
+				if(parameters.source.addHistory) {
+					parameters.source.addHistory({
+						"type": "item_loss",
+						"modified": "item",
+						"item": parameters.event.data.item,
+						"time": Date.now()
+					});
+				}
+				notify.modification = {
+					"history": parameters.source.history,
+					"item": parameters.source.item
+				};
 				notify.type = parameters.source._type;
 				notify.time = Date.now();
 				notify.id = parameters.source.id;
-//				parameters.universe.emit("entity:item:loss", {
-//					"item": parameters.event.data.item,
-//					"entity": parameters.source.id
-//				});
+				parameters.universe.emit("entity:item:loss", {
+					"item": parameters.event.data.item,
+					"source": parameters.source.id
+				});
 				parameters.universe.emit("model:modified", notify);
-				console.log("Taken: ", parameters.event.data.item, parameters.source);
+//				console.log("Taken: ", parameters.event.data.item, parameters.source);
+				console.log("Taken:" + JSON.stringify(notify, null, 4));
+				done(parameters);
+			})
+			.catch(fail);
+		} else if((container = hasItemInItem(parameters)) && (index = container.item.indexOf(parameters.event.data.item)) !== -1) {
+			container.item.splice(index, 1);
+			parameters.universe.collections[container._type].updateOne({"id":container.id}, {"$set":{"item": container.item}})
+			.then(function() {
+				notify = {};
+				notify.modification = {
+					"item": container.item
+				};
+				notify.type = container._type;
+				notify.time = Date.now();
+				notify.id = container.id;
+				parameters.universe.emit("entity:item:loss", {
+					"item": parameters.event.data.item,
+					"source": container.id
+				});
+				parameters.universe.emit("model:modified", notify);
+//				console.log("Taken: ", parameters.event.data.item, parameters.source);
+				console.log("Taken:" + JSON.stringify(notify, null, 4));
 				done(parameters);
 			})
 			.catch(fail);
@@ -66,7 +129,18 @@ var giveItem = function(parameters) {
 		parameters.universe.collections[parameters.receiving._type].updateOne({"id":parameters.receiving.id}, {"$set":{"item": parameters.receiving.item}})
 		.then(function() {
 			notify = {};
-			notify.modification = {"item": parameters.receiving.item};
+			if(parameters.source.addHistory) {
+				parameters.receiving.addHistory({
+					"type": "item_gain",
+					"modified": "item",
+					"item": parameters.event.data.item,
+					"time": Date.now()
+				});
+			}
+			notify.modification = {
+				"history": parameters.receiving.history,
+				"item": parameters.receiving.item
+			};
 			notify.type = parameters.receiving._type;
 			notify.time = Date.now();
 			notify.id = parameters.receiving.id;
@@ -160,7 +234,16 @@ module.exports.give = {
 				})
 				.then(function() {
 					notify = {};
-					notify.modification = {"item": receiving.item};
+					receiving.addHistory({
+						"type": "item_gain",
+						"modified": "item",
+						"item": item.id,
+						"time": Date.now()
+					});
+					notify.modification = {
+						"history": receiving.history,
+						"item": receiving.item
+					};
 					notify.type = receiving._type;
 					notify.time = Date.now();
 					notify.id = receiving.id;
@@ -173,7 +256,16 @@ module.exports.give = {
 				universe.collections[receiving._type].updateOne({"id":receiving.id}, {"$set":{"item": receiving.item}})
 				.then(function() {
 					notify = {};
-					notify.modification = {"item": receiving.item};
+					receiving.addHistory({
+						"type": "item_gain",
+						"modified": "item",
+						"item": item.id,
+						"time": Date.now()
+					});
+					notify.modification = {
+						"history": receiving.history,
+						"item": receiving.item
+					};
 					notify.type = receiving._type;
 					notify.time = Date.now();
 					notify.id = receiving.id;
@@ -214,7 +306,7 @@ module.exports.take = {
 
 		if(target && target.item && item && event.player.master) {
 			for(x=0; index === -2 && x<target.item.length; x++) {
-				if(target.item[x].id === item.id) {
+				if(target.item[x] === item.id) {
 					index = x;
 				}
 			}
@@ -224,7 +316,16 @@ module.exports.take = {
 				universe.collections[target._type].updateOne({"id":target.id}, {"$set":{"item": target.item}})
 				.then(function() {
 					notify = {};
-					notify.modification = {"item": target.item};
+					target.addHistory({
+						"type": "item_loss",
+						"modified": "item",
+						"item": item.id,
+						"time": Date.now()
+					});
+					notify.modification = {
+						"history": target.history,
+						"item": target.item
+					};
 					notify.type = target._type;
 					notify.time = Date.now();
 					notify.id = target.id;
