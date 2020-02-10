@@ -11,6 +11,7 @@
 var maxHistoryLength = 100000,
 	trackedValues = [
 		"location",
+		"inside",
 		"credits",
 		"brawn",
 		"agility",
