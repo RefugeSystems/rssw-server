@@ -280,7 +280,9 @@ module.exports.modifyProcessor = function(universe, event) {
 		record._last = Date.now();
 		delete(record.echo);
 		delete(record._id);
+		record.updated = Date.now();
 		if(insert) {
+			record.created = record.updated;
 			universe.collections[model._type].insertOne(record)
 			.catch(universe.generalError);
 		} else {
