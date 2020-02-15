@@ -10,6 +10,15 @@
 
 var maxHistoryLength = 100000,
 	trackedValues = [
+//		Base stat changes don't make sense without additional work to account for the racial base, otherwise might confuse people 
+//		"brawn",
+//		"agility",
+//		"intellect",
+//		"cunning",
+//		"willpower",
+//		"pressence",
+		"wounds",
+		"strain",
 		"location",
 		"inside",
 		"credits",
@@ -178,6 +187,10 @@ module.exports.modifyHandler = function(noun) {
 	};
 };
 
+
+module.exports.detailProcessor = function(universe, event) {
+	// TODO: Individual Piece-Meal acquisitions
+};
 
 /**
  * 
@@ -364,6 +377,12 @@ module.exports.registerNoun = function(noun, models, handlers) {
 	handlers.push({
 		"process": module.exports.modifyProcessor,
 		"events": ["player:modify:" + noun]
+	});
+	// Handle specific minute edits such as "Add Knowledge" or "Loss Knowledge" concepts instead of a bulk delta
+	//   This is generally for Arrays for specific item edits with which the bulk commit would have issues 
+	handlers.push({
+		"process": module.exports.detailProcessor,
+		"events": ["player:modify:" + noun + ":detail"]
 	});
 	handlers.push({
 		"process": module.exports.deleteProcessor,
