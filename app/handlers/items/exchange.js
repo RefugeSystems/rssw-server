@@ -65,18 +65,19 @@ var takeItem = function(parameters) {
 			parameters.universe.collections[parameters.source._type].updateOne({"id":parameters.source.id}, {"$set":{"item": parameters.source.item}})
 			.then(function() {
 				notify = {};
-				if(parameters.source.addHistory) {
+				notify.modification = {};
+				if(typeof(parameters.source.addHistory) === "function") {
+					notify.modification.history = parameters.source.history;
 					parameters.source.addHistory({
 						"type": "item_loss",
 						"modified": "item",
 						"item": parameters.event.data.item,
 						"time": Date.now()
 					});
+				} else {
+					delete(parameters.source.addHistory);
 				}
-				notify.modification = {
-					"history": parameters.source.history,
-					"item": parameters.source.item
-				};
+				notify.modification.item = parameters.source.item;
 				notify.type = parameters.source._type;
 				notify.time = Date.now();
 				notify.id = parameters.source.id;
@@ -129,18 +130,19 @@ var giveItem = function(parameters) {
 		parameters.universe.collections[parameters.receiving._type].updateOne({"id":parameters.receiving.id}, {"$set":{"item": parameters.receiving.item}})
 		.then(function() {
 			notify = {};
-			if(parameters.source.addHistory) {
+			notify.modification = {};
+			if(typeof(parameters.source.addHistory) === "function") {
+				notify.modification.history = parameters.receiving.history;
 				parameters.receiving.addHistory({
 					"type": "item_gain",
 					"modified": "item",
 					"item": parameters.event.data.item,
 					"time": Date.now()
 				});
+			} else {
+				delete(parameters.source.addHistory);
 			}
-			notify.modification = {
-				"history": parameters.receiving.history,
-				"item": parameters.receiving.item
-			};
+			notify.modification.item = parameters.receiving.item;
 			notify.type = parameters.receiving._type;
 			notify.time = Date.now();
 			notify.id = parameters.receiving.id;
@@ -234,16 +236,19 @@ module.exports.give = {
 				})
 				.then(function() {
 					notify = {};
-					receiving.addHistory({
-						"type": "item_gain",
-						"modified": "item",
-						"item": item.id,
-						"time": Date.now()
-					});
-					notify.modification = {
-						"history": receiving.history,
-						"item": receiving.item
-					};
+					notify.modification = {};
+					if(typeof(receiving.addHistory) === "function") {
+						notify.modification.history = receiving.history;
+						receiving.addHistory({
+							"type": "item_gain",
+							"modified": "item",
+							"item": item.id,
+							"time": Date.now()
+						});
+					} else {
+						delete(receiving.addHistory);
+					}
+					notify.modification.item = item.id;
 					notify.type = receiving._type;
 					notify.time = Date.now();
 					notify.id = receiving.id;
@@ -316,16 +321,19 @@ module.exports.take = {
 				universe.collections[target._type].updateOne({"id":target.id}, {"$set":{"item": target.item}})
 				.then(function() {
 					notify = {};
-					target.addHistory({
-						"type": "item_loss",
-						"modified": "item",
-						"item": item.id,
-						"time": Date.now()
-					});
-					notify.modification = {
-						"history": target.history,
-						"item": target.item
-					};
+					notify.modification = {};
+					if(typeof(target.addHistory) === "function") {
+						notify.modification.history = target.history;
+						receiving.addHistory({
+							"type": "item_loss",
+							"modified": "item",
+							"item": item.id,
+							"time": Date.now()
+						});
+					} else {
+						delete(target.addHistory);
+					}
+					notify.modification.item = item.id;
 					notify.type = target._type;
 					notify.time = Date.now();
 					notify.id = target.id;
