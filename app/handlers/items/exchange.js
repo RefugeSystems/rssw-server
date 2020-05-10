@@ -14,7 +14,7 @@ var hasItemInItem = function(parameters) {
 	var hold,
 		x;
 	
-	if((parameters.event.player.id === parameters.source.owner || (parameters.source.owners && parameters.source.owners.indexOf(parameters.event.player.id) !== -1))
+	if((parameters.event.player.master || parameters.event.player.id === parameters.source.owner || (parameters.source.owners && parameters.source.owners.indexOf(parameters.event.player.id) !== -1))
 			&& parameters.source.item
 			&& parameters.source.item.length) {
 		for(x=0; x<parameters.source.item.length; x++) {
