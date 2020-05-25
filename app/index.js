@@ -12,6 +12,7 @@
  * @param {Object} [log] What to use for the log factors. Defaults to console.
  */
 module.exports = function(configuration, models, handlers, log) {
+	require("./extensions/string.js");
 	require("./extensions/array.js");
 	var Universe = require("./universe"),
 		WebSocket = require("ws"),
@@ -116,11 +117,14 @@ module.exports = function(configuration, models, handlers, log) {
 	});
 	
 	server.listen(configuration.server.port);
+	console.log("Listening: " + configuration.server.port);
 };
 
+console.log("Starting...");
 var configuration = require("a-configuration");
 configuration._await
 .then(function() {
+	console.log("Loading...");
 	var utilityHandler = require("./handlers/utility"),
 		itemHandler = require("./handlers/items/exchange"),
 		roomHandler = require("./handlers/rooms/exchange"),
@@ -168,7 +172,8 @@ configuration._await
 	handlers.push(itemHandler.take);
 	handlers.push(roomHandler.give);
 	handlers.push(roomHandler.take);
-	
+
+	console.log("Creating...");
 	new module.exports(configuration, models, handlers);
 }).catch(function(err) {
 	console.log("Err: ", err);
