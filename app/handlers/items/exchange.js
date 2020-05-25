@@ -74,8 +74,6 @@ var takeItem = function(parameters) {
 						"item": parameters.event.data.item,
 						"time": Date.now()
 					});
-				} else {
-					delete(parameters.source.addHistory);
 				}
 				notify.modification.item = parameters.source.item;
 				notify.type = parameters.source._type;
@@ -131,7 +129,7 @@ var giveItem = function(parameters) {
 		.then(function() {
 			notify = {};
 			notify.modification = {};
-			if(typeof(parameters.source.addHistory) === "function") {
+			if(typeof(parameters.receiving.addHistory) === "function") {
 				notify.modification.history = parameters.receiving.history;
 				parameters.receiving.addHistory({
 					"type": "item_gain",
@@ -139,8 +137,6 @@ var giveItem = function(parameters) {
 					"item": parameters.event.data.item,
 					"time": Date.now()
 				});
-			} else {
-				delete(parameters.source.addHistory);
 			}
 			notify.modification.item = parameters.receiving.item;
 			notify.type = parameters.receiving._type;
@@ -245,10 +241,8 @@ module.exports.give = {
 							"item": item.id,
 							"time": Date.now()
 						});
-					} else {
-						delete(receiving.addHistory);
 					}
-					notify.modification.item = item.id;
+					notify.modification.item = receiving.item;
 					notify.type = receiving._type;
 					notify.time = Date.now();
 					notify.id = receiving.id;
@@ -261,12 +255,14 @@ module.exports.give = {
 				universe.collections[receiving._type].updateOne({"id":receiving.id}, {"$set":{"item": receiving.item}})
 				.then(function() {
 					notify = {};
-					receiving.addHistory({
-						"type": "item_gain",
-						"modified": "item",
-						"item": item.id,
-						"time": Date.now()
-					});
+					if(typeof(receiving.addHistory) === "function") {
+						receiving.addHistory({
+							"type": "item_gain",
+							"modified": "item",
+							"item": item.id,
+							"time": Date.now()
+						});
+					}
 					notify.modification = {
 						"history": receiving.history,
 						"item": receiving.item
@@ -324,14 +320,12 @@ module.exports.take = {
 					notify.modification = {};
 					if(typeof(target.addHistory) === "function") {
 						notify.modification.history = target.history;
-						receiving.addHistory({
+						target.addHistory({
 							"type": "item_loss",
 							"modified": "item",
 							"item": item.id,
 							"time": Date.now()
 						});
-					} else {
-						delete(target.addHistory);
 					}
 					notify.modification.item = item.id;
 					notify.type = target._type;
