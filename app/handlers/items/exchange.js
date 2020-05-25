@@ -163,6 +163,7 @@ module.exports.give = {
 			item = universe.nouns.item[event.data.item],
 			parameters = {},
 			receiving,
+			old_item,
 			notify;
 		
 		if(receiving = universe.nouns.entity[event.data.target]) {
@@ -204,13 +205,12 @@ module.exports.give = {
 		} else if(receiving && !receiving.template && event.player.master) {
 			if(item.template) {
 				// TODO: Add Randomization
-				item = JSON.parse(JSON.stringify(item));
-				item.source_template = item.id;
-				item.id += ":" + Date.now();
-				item._id = undefined;
-				item.template = false;
-				delete(item.template);
-				delete(item._id);
+				old_item = item;
+//				item = JSON.parse(JSON.stringify(item));
+				item = {};
+				item.source_template = old_item.id;
+				item.parent = old_item.id;
+				item.id = old_item.id + ":" + Date.now();
 	
 				universe.nouns.item[item.id] = item;
 				universe.collections.item.insertOne(item)
