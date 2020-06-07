@@ -55,11 +55,6 @@ module.exports = function(configuration, models, handlers, log) {
 	handler = new WebSocket.Server(options);
 	// This is essentially an extra bounce, can be moved to a direct Universe connection or at least out of the core server initialization for clarity
 	handler.on("connection", function(connection, request) {
-		log.info({
-			"user": connection.user,
-			"ip": request.ip
-		}, "New Connection Received");
-		
 		connection.session = request.session;
 		connection.request = request;
 		connection.host = request.ip;
@@ -75,6 +70,13 @@ module.exports = function(configuration, models, handlers, log) {
 			connection.name = request.url.searchParams.get("name");
 			connection.id= request.url.searchParams.get("id");
 		}
+		
+		log.info({
+			"user": connection.id,
+			"username": connection.username,
+			"ip": request.connection.remoteAddress,
+			"receivedPasscode": !!connection.passcode
+		}, "New Connection Received");
 		
 //		console.log("Registering Client: ", connection.session);
 		if(connection.passcode) {
@@ -125,11 +127,9 @@ module.exports = function(configuration, models, handlers, log) {
 	console.log("Listening: " + configuration.server.port);
 };
 
-console.log("Starting...");
 var configuration = require("a-configuration");
 configuration._await
 .then(function() {
-	console.log("Loading...");
 	var utilityHandler = require("./handlers/utility"),
 		itemHandler = require("./handlers/items/exchange"),
 		roomHandler = require("./handlers/rooms/exchange"),
@@ -179,7 +179,6 @@ configuration._await
 	handlers.push(roomHandler.give);
 	handlers.push(roomHandler.take);
 
-	console.log("Creating...");
 	new module.exports(configuration, models, handlers);
 }).catch(function(err) {
 	console.log("Err: ", err);

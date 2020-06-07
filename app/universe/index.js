@@ -73,7 +73,7 @@ module.exports = function(configuration, models, handlers) {
 			players[buffer[x].id] = new Player(universe, buffer[x]);
 			nouns.player[buffer[x].id] = players[buffer[x].id];
 			if(buffer[x].passcode) {
-				passcodes[buffer[x].id] = buffer[x].passcode.sha256();
+				passcodes[buffer[x].id] = buffer[x].passcode;
 				delete(buffer[x].passcode);
 			}
 		}
@@ -162,7 +162,7 @@ module.exports = function(configuration, models, handlers) {
 	this.connectPlayer = function(connection) {
 		if(nouns && nouns.player) {
 			var player = nouns.player[connection.id];
-			console.log("Connecting Player: " + connection.id + " -> " + connection.passcode, passcodes);
+//			console.log("Connecting Player: " + connection.id + " -> " + connection.passcode, passcodes);
 			if(player) {
 				if(!passcodes[player.id] || passcodes[player.id] === connection.passcode) {
 					//console.log("Connection for " + connection.username, player);
@@ -183,7 +183,7 @@ module.exports = function(configuration, models, handlers) {
 	
 	this.setPlayerPasscode = function(id, passcode) {
 		if(passcode) {
-			passcodes[id] = passcode.sha256(); // Intentional double encoding generally
+			passcodes[id] = passcode;
 		} else {
 			delete(passcodes[id]);
 		}
@@ -200,7 +200,7 @@ module.exports = function(configuration, models, handlers) {
 		//console.log("Nouns: ", nouns);
 		return nouns; // TODO: Finish implementation for pruning
 		
-		var state;
+//		var state;
 		if(!player && !mark) {
 			return nouns;
 		}

@@ -6,6 +6,30 @@
  */
 
 /**
+ * Maps player object keys to a boolean to indicate if a player
+ * can update that property when they are the account owner.
+ * @property modifiable
+ * @type Object
+ * @private
+ */
+var modifiable = {};
+modifiable.description = true;
+modifiable.username = true;
+modifiable.passcode = true;
+modifiable.email = true;
+modifiable.name = true;
+modifiable.linked_battlenet = true;
+modifiable.linked_steam = true;
+modifiable.linked_facebook = true;
+modifiable.linked_reddit = true;
+modifiable.linked_discord = true;
+modifiable.linked_gmail = true;
+// To keep lookup keys
+modifiable._type = true;
+modifiable.id = true;
+
+
+/**
  * 
  * 
  * @event player:modify:player
@@ -24,18 +48,28 @@
  * @param {Object} event
  */
 module.exports.modify = function(universe, event) {
-	if(event.player.master) {
-		if(event && event.data && event.data.id) {
+	var keys,
+		x;
+	
+	if(event && event.data && event.data.id) {
+		if(!event.player.master) {
+			keys = Object.keys(event.data);
+			for(x=0; x<keys.length; x++) {
+				if(!modifiable[keys[x]]) {
+					delete(event.data[keys[x]]);
+				}
+			}
+		}
+		
+		if(event.player.master || event.player.id === event.data.id) {
 			delete(event.data.echo);
 	
-			console.log("Inc: " + event.data.id + " -> " + event.data.passcode);
 			if(event.data.passcode) {
 				event.data.passcode = event.data.passcode.sha256();
 				universe.setPlayerPasscode(event.data.id, event.data.passcode);
 			} else {
 				universe.setPlayerPasscode(event.data.id, null);
 			}
-			console.log("Res: " + event.data.id + " -> " + event.data.passcode);
 			
 			if(universe.nouns.player[event.data.id]) {
 				Object.assign(universe.nouns.player[event.data.id], event.data);
@@ -49,6 +83,7 @@ module.exports.modify = function(universe, event) {
 			}
 			
 			if(event.data.passcode) {
+				delete(universe.nouns.player[event.data.id].passcode);
 				delete(event.data.passcode);
 			}
 			
@@ -60,13 +95,13 @@ module.exports.modify = function(universe, event) {
 			
 			universe.emit("model:modified", notify);
 		} else {
-			console.log("Unable to create player, no ID found");
+			universe.emit("error", {
+				"message": "Modification Access Violation",
+				"time": Date.now(),
+				"cause": event
+			});
 		}
 	} else {
-		universe.emit("error", {
-			"message": "Modification Access Violation",
-			"time": Date.now(),
-			"cause": event
-		});
+		console.log("Unable to create or update player, no ID found");
 	}
 };
