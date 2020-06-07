@@ -18,13 +18,16 @@ closeSocket = function(connection, conf) {
  * @param {Array} handlers
  */
 module.exports = function(configuration, models, handlers) {
+	this.version = configuration.package.version;
 	this.setMaxListeners(200);
+	
 	var LogHandler = require("../handlers/system/logging"),
 		Player = require("../handlers/player/channel"),
 		constructor = this.constructor = {},
 		collections = this.collections = {},
 		nouns = this.nouns = {},
 		universe = this,
+		passcodes = {},
 		modeling = {},
 		players = {},
 		generalError,
@@ -35,9 +38,9 @@ module.exports = function(configuration, models, handlers) {
 		x;
 	
 	if(configuration.supporting) {
-		console.log("Supported: ", configuration.supporting);
+//		console.log("Supported: ", configuration.supporting);
 		support = configuration.mongo.connectDB(configuration.supporting.database);
-		console.log("Support: ", support);
+//		console.log("Support: ", support);
 	}
 
 	// Standard Handling
@@ -69,6 +72,10 @@ module.exports = function(configuration, models, handlers) {
 		for(x=0; x<buffer.length; x++) {
 			players[buffer[x].id] = new Player(universe, buffer[x]);
 			nouns.player[buffer[x].id] = players[buffer[x].id];
+			if(buffer[x].passcode) {
+				passcodes[buffer[x].id] = buffer[x].passcode.sha256();
+				delete(buffer[x].passcode);
+			}
 		}
 		return collections[models[0].type].find().toArray();
 	});
@@ -153,13 +160,32 @@ module.exports = function(configuration, models, handlers) {
 	 * 
 	 */
 	this.connectPlayer = function(connection) {
-		var player = nouns.player[connection.id];
-		if(player) {
-			//console.log("Connection for " + connection.username, player);
-			player.connect(connection);
+		if(nouns && nouns.player) {
+			var player = nouns.player[connection.id];
+			console.log("Connecting Player: " + connection.id + " -> " + connection.passcode, passcodes);
+			if(player) {
+				if(!passcodes[player.id] || passcodes[player.id] === connection.passcode) {
+					//console.log("Connection for " + connection.username, player);
+					player.connect(connection);
+				} else {
+					console.log("Player Denied[" + connection.id + "]: Passcode Rejected");
+					closeSocket(connection, configuration.codes.noplayer);
+				}
+			} else {
+				console.log("Player Doesn't Exist[" + connection.id + "]: ", Object.keys(nouns.player));
+				closeSocket(connection, configuration.codes.noplayer);
+			}
 		} else {
-			console.log("Player Doesn't Exist[" + connection.id + "]: ", Object.keys(nouns.player));
-			closeSocket(connection, configuration.codes.noplayer);
+			console.log("Universe Not Ready for Connection[" + connection.id + "]");
+			closeSocket(connection, configuration.codes.notready);
+		}
+	};
+	
+	this.setPlayerPasscode = function(id, passcode) {
+		if(passcode) {
+			passcodes[id] = passcode.sha256(); // Intentional double encoding generally
+		} else {
+			delete(passcodes[id]);
 		}
 	};
 	

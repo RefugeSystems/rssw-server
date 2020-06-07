@@ -113,6 +113,7 @@ module.exports = function(universe, details) {
 			"event": universe.currentState(player),
 			"type": "world:state",
 			"sent": Date.now(),
+			"version": universe.version,
 			"master": player.master
 		};
 		
@@ -160,6 +161,7 @@ module.exports = function(universe, details) {
 					"classification": "non-standard",
 					"type": "player:connected",
 					"event": connecting,
+					"version": universe.version,
 					"sent": Date.now()
 				});
 			}
@@ -174,6 +176,7 @@ module.exports = function(universe, details) {
 					"emitted": event.emitted,
 					"event": event,
 					"echo": event.echo,
+					"version": universe.version,
 					"sent": Date.now(),
 					"type": eventType
 				});
@@ -189,6 +192,7 @@ module.exports = function(universe, details) {
 					"emitted": event.emitted,
 					"event": event,
 					"echo": event.echo,
+					"version": universe.version,
 					"sent": Date.now(),
 					"type": eventType
 				});
@@ -203,6 +207,7 @@ module.exports = function(universe, details) {
 				"emitted": event.emitted,
 				"event": event,
 				"echo": event.echo,
+				"version": universe.version,
 				"sent": Date.now(),
 				"type": eventType
 			});

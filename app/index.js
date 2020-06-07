@@ -66,15 +66,20 @@ module.exports = function(configuration, models, handlers, log) {
 		
 		if(request.session) {
 			connection.username = request.session.username;
+			connection.passcode = request.session.passcode;
 			connection.name = request.session.name;
 			connection.id = request.session.id;
 		} else {
 			connection.username = request.url.searchParams.get("username");
+			connection.passcode = request.url.searchParams.get("passcode");
 			connection.name = request.url.searchParams.get("name");
 			connection.id= request.url.searchParams.get("id");
 		}
 		
 //		console.log("Registering Client: ", connection.session);
+		if(connection.passcode) {
+			connection.passcode = connection.passcode.sha256();
+		}
 		universe.connectPlayer(connection);
 	});
 	
@@ -147,6 +152,7 @@ configuration._await
 	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
 	utilityHandler.registerNoun("playlist", models, handlers);
+	utilityHandler.registerNoun("setting", models, handlers);
 	utilityHandler.registerNoun("ability", models, handlers);
 	utilityHandler.registerNoun("dataset", models, handlers);
 	utilityHandler.registerNoun("loadout", models, handlers);
