@@ -10,6 +10,12 @@ var EventEmitter = require("events").EventEmitter,
 	Random = require("rs-random"),
 	util = require("util"),
 	keys = [
+		"linked_battlenet",
+		"linked_facebook",
+		"linked_discord",
+		"linked_reddit",
+		"linked_imgur",
+		
 		"username",
 		"master",
 		"entity",
