@@ -30,6 +30,7 @@ module.exports = function(universe, details) {
 	this.last = 0;
 	
 	var connections = [],
+		openSockets = {},
 		standardEvents,
 		player = this,
 		masterEvents,
@@ -50,10 +51,9 @@ module.exports = function(universe, details) {
 		player.last = Date.now();
 		connections.push(socket);
 		player.connections++;
-		var buffer,
-			cache;
 
 		socket.connect_id = Random.identifier("connection");
+		openSockets[socket.connect_id] = socket;
 		
 		socket.onmessage = function(event) {
 			var message = JSON.parse(event.data);
@@ -67,12 +67,16 @@ module.exports = function(universe, details) {
 				"sent": parseInt(message.sent)
 			};
 
-//			console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
+			console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
 			
 			setTimeout(function() {
 				player.last = Date.now();
 				try {
-					universe.emit(message.eventType, message);
+					if(player.event_response[message.eventType]) {
+						player.event_response[message.eventType](message, socket);
+					} else {
+						universe.emit(message.eventType, message);
+					}
 //					console.log("Player Message Emitted");
 				} catch(violation) {
 					var event = {
@@ -86,6 +90,7 @@ module.exports = function(universe, details) {
 		};
 		
 		socket.onclose = function(event) {
+			delete(openSockets[socket.connect_id]);
 			connections.purge(socket);
 			player.connections--;
 			player.leaves++;
@@ -131,14 +136,28 @@ module.exports = function(universe, details) {
 	 * 
 	 * @method send
 	 * @param {Object} event
+	 * @param {Object} [socket] Send only to a specific socket.
 	 */
-	var send = this.send = function(event) {
+	var send = this.send = function(event, socket) {
 		event.sent = Date.now();
 		var data = JSON.stringify(event);
-		for(var x=0; x<connections.length; x++) {
-//			console.log("Sending... ", event);
-			connections[x].send(data);
+		if(socket) {
+			socket.send(data);
+		} else {
+			for(var x=0; x<connections.length; x++) {
+	//			console.log("Sending... ", event);
+				connections[x].send(data);
+			}
 		}
+	};
+	
+	this.event_response = {};
+	this.event_response["player:ping"] = function(message, socket) {
+		send({
+			"type": "ping",
+			"ping": message.data.ping,
+			"echo": message.data.echo
+		}, socket);
 	};
 	
 	standardEvents = [

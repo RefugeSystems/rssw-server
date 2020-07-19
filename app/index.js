@@ -172,6 +172,11 @@ configuration._await
 	utilityHandler.registerNoun("slot", models, handlers);
 	utilityHandler.registerNoun("sex", models, handlers);
 
+	models.push({
+		"Model": require("./models/party.js"),
+		"type": "party"
+	});
+	
 	handlers.push(characterHandler.create);
 	handlers.push(masterHandlers.control);
 	handlers.push(itemHandler.give);

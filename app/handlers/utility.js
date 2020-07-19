@@ -188,9 +188,123 @@ module.exports.modifyHandler = function(noun) {
 };
 
 
-module.exports.detailProcessor = function(universe, event) {
-	// TODO: Individual Piece-Meal acquisitions
+var processAsAdditive = function(a, b) {
+	if(typeof(a) === "number") {
+		return parseFloat((a + b).toFixed(2));
+	} else if(a instanceof Array) {
+		a.push(b);
+		return a;
+	}
 };
+
+var processAsSubtractive = function(a, b) {
+	var index;
+	if(typeof(a) === "number") {
+		return parseFloat((a - b).toFixed(2));
+	} else if(a instanceof Array) {
+		index = a.indexOf(b);
+		if(index !== -1) {
+			a.splice(index, 1);
+		}
+		return a;
+	}
+	
+};
+
+
+module.exports.detailAddProcessor = function(universe, event) {
+	module.exports.detailProcessor(universe, event, processAsAdditive);
+}
+
+module.exports.detailSubProcessor = function(universe, event) {
+	module.exports.detailProcessor(universe, event, processAsSubtractive);
+}
+
+
+module.exports.detailProcessor = function(universe, event, processAs) {
+	// TODO: Individual Piece-Meal acquisitions
+	var model = event.data,
+		delta = model.delta,
+		record = universe.nouns[model._type][model.id],
+		modifications = {},
+		notify = {},
+		history,
+		keys,
+		x,
+		y;
+	
+	console.log("Detail Event: ", event);
+	
+	if(!record) {
+		console.log("Specified Record[" + model.id + "] not found in type[" + model.type + "]: " + JSON.stringify(event, null, 4));
+		return null;
+	}
+	
+	if(!delta) {
+		console.log("No delta data specified, aborting detail processing: " + JSON.stringify(event, null, 4));
+		return null;
+	}
+	
+	if(allowedToModify(universe, event)) {
+		if(!record.history) {
+			record.history = [];
+		}
+
+		keys = Object.keys(delta);
+		
+		history = {};
+		record.history.push(history);
+		record.history.splice(maxHistoryLength);
+		history.changes = delta;
+		history.type = "delta";
+		history.changed = keys;
+		
+		for(x=0; x<keys.length; x++) {
+			modifications[keys[x]] = processAs(record[keys[x]], delta[keys[x]]);
+			if(universe.bounds && universe.bounds[keys[x]]) {
+				if(universe.bounds[keys[x]].min !== undefined && universe.bounds[keys[x]].min > modifications[keys[x]]) {
+					modifications[keys[x]] = universe.bounds[keys[x]].min;
+				} else if(universe.bounds[keys[x]].max !== undefined && universe.bounds[keys[x]].max < modifications[keys[x]]) {
+					modifications[keys[x]] = universe.bounds[keys[x]].max;
+				}
+			}
+			record[keys[x]] = modifications[keys[x]];
+		}
+
+		console.log("Detail Event Modifications[" + record.id + "]: ", modifications);
+		universe.collections[model._type].updateOne({"id":record.id}, {"$set": modifications})
+		.then(function(res) {
+			// Happens when setting to the same as the current value
+//			if(res.result.nModified === 0) {
+//				console.log("Failure to update record[" + record.id + "]");
+//			}
+		})
+		.catch(function(err) {
+			console.log("Err: ", err);
+		});
+//		.catch(universe.generalError);
+		
+		notify.relevant = record.owners || [];
+		if(record.owner) {
+			notify.relevant.push(record.owner);
+		}
+		notify.modification = modifications;
+		notify.type = model._type;
+		notify.time = Date.now();
+		notify.id = model.id;
+		
+		universe.emit("model:modified", notify);
+	} else {
+		console.log("Not allowed to modify: " + JSON.stringify(event, null, 4));
+		universe.emit("error", {
+			"message": "Modification Access Violation",
+			"time": Date.now(),
+			"cause": event
+		});
+	}
+};
+
+
 
 /**
  * 
@@ -381,8 +495,12 @@ module.exports.registerNoun = function(noun, models, handlers) {
 	// Handle specific minute edits such as "Add Knowledge" or "Loss Knowledge" concepts instead of a bulk delta
 	//   This is generally for Arrays for specific item edits with which the bulk commit would have issues 
 	handlers.push({
-		"process": module.exports.detailProcessor,
-		"events": ["player:modify:" + noun + ":detail"]
+		"process": module.exports.detailAddProcessor,
+		"events": ["player:modify:" + noun + ":detail:additive"]
+	});
+	handlers.push({
+		"process": module.exports.detailSubProcessor,
+		"events": ["player:modify:" + noun + ":detail:subtractive"]
 	});
 	handlers.push({
 		"process": module.exports.deleteProcessor,

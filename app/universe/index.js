@@ -19,6 +19,7 @@ closeSocket = function(connection, conf) {
  */
 module.exports = function(configuration, models, handlers) {
 	this.version = configuration.package.version;
+	this.bounds = configuration.bounds;
 	this.setMaxListeners(200);
 	
 	var LogHandler = require("../handlers/system/logging"),
@@ -41,6 +42,19 @@ module.exports = function(configuration, models, handlers) {
 //		console.log("Supported: ", configuration.supporting);
 		support = configuration.mongo.connectDB(configuration.supporting.database);
 //		console.log("Support: ", support);
+	}
+	
+	if(!configuration.codes) {
+		configuration.codes = {};
+	}
+	if(!configuration.codes.disconnect) {
+		configuration.codes.disconnect = "disconnected";
+	}
+	if(!configuration.codes.noplayer) {
+		configuration.codes.noplayer = "noplayer";
+	}
+	if(!configuration.codes.notready) {
+		configuration.codes.notready = "notready";
 	}
 
 	// Standard Handling
@@ -178,6 +192,16 @@ module.exports = function(configuration, models, handlers) {
 		} else {
 			console.log("Universe Not Ready for Connection[" + connection.id + "]");
 			closeSocket(connection, configuration.codes.notready);
+		}
+	};
+	
+	
+	this.disconnectPlayer = function(player, connection) {
+		if(player && connection) {
+			if(!passcodes[player.id] || passcodes[player.id] === connection.passcode) {
+				player.disconnect(connection);
+				closeSocket(connection, configuration.codes.disconnect);
+			}
 		}
 	};
 	
