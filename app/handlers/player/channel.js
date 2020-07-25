@@ -61,13 +61,13 @@ module.exports = function(universe, details) {
 				"type": "player",
 				"event": message.event,
 				"eventType": "player:" + message.event,
-				"player": player,
 				"data": message.data,
 				"received": Date.now(),
 				"sent": parseInt(message.sent)
 			};
 
 			console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
+			message.player = player;
 			
 			setTimeout(function() {
 				player.last = Date.now();
