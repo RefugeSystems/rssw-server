@@ -1,8 +1,5 @@
-var General = require("./_general.js");
-
-class Party extends General {
+class General {
 	constructor(details, loading) {
-		super(details, loading);
 		Object.assign(this, details);
 		if(loading) {
 			this._type = loading.type;
@@ -12,10 +9,12 @@ class Party extends General {
 		if(!this.history) {
 			this.history = [];
 		}
-		if(!this.entity) {
-			this.entity = [];
-		}
+	}
+	
+	addHistory(event) {
+		this.history.unshift(event);
+		this.history.splice(maxHistoryLength);
 	}
 }
 
-module.exports = Party;
+module.exports = General;

@@ -1,6 +1,6 @@
 var General = require("./_general.js");
 
-class Party extends General {
+class Entity extends General {
 	constructor(details, loading) {
 		super(details, loading);
 		Object.assign(this, details);
@@ -18,4 +18,4 @@ class Party extends General {
 	}
 }
 
-module.exports = Party;
+module.exports = Entity;

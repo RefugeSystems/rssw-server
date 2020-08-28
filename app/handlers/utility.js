@@ -6,7 +6,11 @@
  * @module Handlers
  */
 
+var configuration = require("a-configuration");
+console.log("Utility: ", configuration.settings);
 
+var locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock;
+var changable = !locked;
 
 var maxHistoryLength = 100000,
 	trackedValues = [
@@ -51,6 +55,10 @@ module.exports.generalPermission = function(event) {
 };
 
 var allowedToModify = function(universe, event) {
+	if(locked) {
+		return false;
+	}
+	
 	if(event.player.master) {
 		return true;
 	}
@@ -194,6 +202,8 @@ var processAsAdditive = function(a, b) {
 	} else if(a instanceof Array) {
 		a.push(b);
 		return a;
+	} else if(!a && typeof(b) === "number") {
+		return parseFloat(b.toFixed(2));
 	}
 };
 
@@ -207,6 +217,8 @@ var processAsSubtractive = function(a, b) {
 			a.splice(index, 1);
 		}
 		return a;
+	} else if(!a && typeof(b) === "number") {
+		return -1 * parseFloat(b.toFixed(2));
 	}
 	
 };
@@ -234,6 +246,11 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 		y;
 	
 	console.log("Detail Event: ", event);
+	
+	if(locked) {
+		console.log("Modification Rejected for Record[" + model.id + "]: Database Changes Locked");
+		return null;
+	}
 	
 	if(!record) {
 		console.log("Specified Record[" + model.id + "] not found in type[" + model.type + "]: " + JSON.stringify(event, null, 4));
@@ -314,7 +331,9 @@ module.exports.detailProcessor = function(universe, event, processAs) {
  * @param {Object} event
  */
 module.exports.modifyProcessor = function(universe, event) {
-	if(allowedToModify(universe, event)) {
+	if(locked) {
+		console.log("Database modifications locked, configuration.settings: ", configuration.settings);
+	} else if(allowedToModify(universe, event)) {
 		var model = event.data,
 			record = universe.nouns[model._type][model.id],
 			notify = {},
@@ -396,7 +415,7 @@ module.exports.modifyProcessor = function(universe, event) {
 						"difference": diff,
 						"time": Date.now()
 						// TODO: Session & Universe Time support
-					})
+					});
 				}
 			}
 		}
@@ -453,6 +472,10 @@ module.exports.modifyProcessor = function(universe, event) {
  * @param {Object} event
  */
 module.exports.deleteProcessor = function(universe, event) {
+	if(locked) {
+		return false;
+	}
+	
 	if(event.player.master) {
 		var model = event.data,
 			notify = {};

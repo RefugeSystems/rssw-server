@@ -178,6 +178,10 @@ configuration._await
 		"Model": require("./models/party.js"),
 		"type": "party"
 	});
+	models.push({
+		"Model": require("./models/entity.js"),
+		"type": "entity"
+	});
 	
 	handlers.push(characterHandler.create);
 	handlers.push(masterHandlers.control);
