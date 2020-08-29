@@ -145,9 +145,10 @@ configuration._await
 	utilityHandler.registerNoun("modifierattrs", models, handlers);
 	utilityHandler.registerNoun("modifierstats", models, handlers);
 	utilityHandler.registerNoun("archetype", models, handlers);
+	utilityHandler.registerNoun("condition", models, handlers);
 	utilityHandler.registerNoun("inventory", models, handlers);
 	utilityHandler.registerNoun("knowledge", models, handlers);
-	utilityHandler.registerNoun("condition", models, handlers);
+	utilityHandler.registerNoun("streamurl", models, handlers);
 	utilityHandler.registerNoun("itemtype", models, handlers);
 	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
@@ -159,6 +160,7 @@ configuration._await
 //	utilityHandler.registerNoun("history", models, handlers);
 	utilityHandler.registerNoun("entity", models, handlers);
 	utilityHandler.registerNoun("effect", models, handlers);
+	utilityHandler.registerNoun("locale", models, handlers);
 //	utilityHandler.registerNoun("planet", models, handlers);
 	utilityHandler.registerNoun("widget", models, handlers);
 	utilityHandler.registerNoun("image", models, handlers);
