@@ -66,7 +66,9 @@ module.exports = function(universe, details) {
 				"sent": parseInt(message.sent)
 			};
 
-			console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
+			if(message.event !== "ping") {
+//				console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
+			}
 			message.player = player;
 			
 			setTimeout(function() {

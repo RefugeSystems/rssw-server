@@ -13,6 +13,7 @@
  * @private
  */
 var modifiable = {};
+modifiable.allow_scripting = true;
 modifiable.description = true;
 modifiable.username = true;
 modifiable.passcode = true;

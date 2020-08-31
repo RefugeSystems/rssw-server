@@ -27,6 +27,7 @@ module.exports = function(configuration, models, handlers) {
 		constructor = this.constructor = {},
 		collections = this.collections = {},
 		nouns = this.nouns = {},
+		supportLoad = {},
 		universe = this,
 		passcodes = {},
 		modeling = {},
@@ -80,15 +81,24 @@ module.exports = function(configuration, models, handlers) {
 	}
 	collections._trash = db.collection("_trash");
 	
-	loading = collections.player.find().toArray();
+	loading = collections.player.find().sort({"updated":-1}).toArray();
 	loading = loading.then(function(buffer) {
 		nouns.player = {};
 		for(x=0; x<buffer.length; x++) {
-			players[buffer[x].id] = new Player(universe, buffer[x]);
-			nouns.player[buffer[x].id] = players[buffer[x].id];
-			if(buffer[x].passcode) {
-				passcodes[buffer[x].id] = buffer[x].passcode;
-				delete(buffer[x].passcode);
+			if(!players[buffer[x].id]) {
+				players[buffer[x].id] = new Player(universe, buffer[x]);
+				nouns.player[buffer[x].id] = players[buffer[x].id];
+				if(buffer[x].passcode) {
+					passcodes[buffer[x].id] = buffer[x].passcode;
+					delete(buffer[x].passcode);
+				}
+			} else {
+				universe.emit("warning", {
+					"message": "Duplicate Object",
+					"time": Date.now(),
+					"type": "player",
+					"data": buffer[x]
+				});
 			}
 		}
 		return collections[models[0].type].find().toArray();
@@ -104,11 +114,21 @@ module.exports = function(configuration, models, handlers) {
 			if(support) {
 				return new Promise(function(done, fail) {
 					var col = support.collection(models[i].type);
-					col.find().toArray().then(function(supporting) {
+					col.find().sort({"updated":-1}).toArray().then(function(supporting) {
 						for(x=0; x<supporting.length; x++) {
-							nouns[load.type][supporting[x].id] = new load.Model(supporting[x], load);
-							nouns[load.type][supporting[x].id]._type = load.type;
-							loaded.push(nouns[load.type][supporting[x].id]);
+							if(!nouns[load.type][supporting[x].id]) {
+								supportLoad[supporting[x].id] = true;
+								nouns[load.type][supporting[x].id] = new load.Model(supporting[x], load);
+								nouns[load.type][supporting[x].id]._type = load.type;
+								loaded.push(nouns[load.type][supporting[x].id]);
+							} else {
+								universe.emit("warning", {
+									"message": "Duplicate Support Object",
+									"time": Date.now(),
+									"type": load.type,
+									"data": supporting[x]
+								});
+							}
 						}
 						done(buffer);
 					}).catch(fail);
@@ -122,13 +142,23 @@ module.exports = function(configuration, models, handlers) {
 //				if(buffer[x].id === "character:aetherwalker:galvaakglinder") {
 //					console.log("Galvak:\n", buffer[x]);
 //				}
-				nouns[load.type][buffer[x].id] = new load.Model(buffer[x], load);
-				nouns[load.type][buffer[x].id]._type = load.type;
-				loaded.push(nouns[load.type][buffer[x].id]);
+				if(!nouns[load.type][buffer[x].id] || supportLoad[buffer[x].id]) {
+					supportLoad[buffer[x].id] = false;
+					nouns[load.type][buffer[x].id] = new load.Model(buffer[x], load);
+					nouns[load.type][buffer[x].id]._type = load.type;
+					loaded.push(nouns[load.type][buffer[x].id]);
+				} else {
+					universe.emit("warning", {
+						"message": "Duplicate Object",
+						"time": Date.now(),
+						"type": load.type,
+						"data": buffer[x]
+					});
+				}
 			}
 			i = i + 1;
 			if(i < models.length) {
-				return collections[models[i].type].find().toArray();
+				return collections[models[i].type].find().sort({"updated":-1}).toArray();
 			}
 		});
 	});

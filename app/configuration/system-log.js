@@ -15,6 +15,7 @@ var id = 0;
 module.exports.resolve = function(configuration) {
 	return new Promise(function(done) {
 		var reqSerializer = function(req) {
+			console.log("Serializing...");
 			if(req._serialized) {
 				if(req.session) {
 					return {
@@ -81,6 +82,17 @@ module.exports.resolve = function(configuration) {
 			}
 		};
 		
+		var dataSerializer = function(data) {
+			if(data && data.history) {
+				var mask = Object.assign({}, data);
+				mask.history = [].concat(mask.history);
+				mask.history.splice(10);
+				return mask;
+			}
+			
+			return data;
+		};
+		
 		var errorStackRegex = new RegExp("([^\])\n\\s*", "g");
 		var errorSerializer = function(error) {
 			return error?{
@@ -99,14 +111,18 @@ module.exports.resolve = function(configuration) {
 		configuration.systemLog = Object.assign({}, defaults, configuration.systemLog);
 		
 		configuration.systemLog.serializers = {
-			response: responseSerializer,
-			request: reqSerializer,
-			res: responseSerializer,
-			req: reqSerializer,
-
-			world: worldSerializer,
-			error: errorSerializer,
-			err: errorSerializer
+			"response": responseSerializer,
+			"request": reqSerializer,
+			"res": responseSerializer,
+			"req": reqSerializer,
+			
+			"entity": dataSerializer,
+			"record": dataSerializer,
+			"data": dataSerializer,
+			
+			"world": worldSerializer,
+			"error": errorSerializer,
+			"err": errorSerializer
 		};
 		
 		configuration.systemLog = new Bunyan(configuration.systemLog);

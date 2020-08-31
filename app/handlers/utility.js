@@ -115,6 +115,7 @@ module.exports.modifyHandler = function(noun) {
 					}
 				}
 				
+				
 				for(x=0; x<trackedArrays.length; x++) {
 					if(record[trackedArrays[x]] && event.data[trackedArrays[x]] && record[trackedArrays[x]].length !== event.data[trackedArrays[x]].length) {
 						diffNew = {};
@@ -534,6 +535,7 @@ module.exports.registerNoun = function(noun, models, handlers) {
 
 var GeneralConstructor = function(details, loading) {
 	Object.assign(this, details);
+	
 	if(loading) {
 		this._type = loading.type;
 	} else {

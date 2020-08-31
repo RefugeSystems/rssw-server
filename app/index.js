@@ -134,6 +134,7 @@ configuration._await
 		itemHandler = require("./handlers/items/exchange"),
 		roomHandler = require("./handlers/rooms/exchange"),
 		characterHandler = require("./handlers/character"),
+		journalHandler = require("./handlers/journals/update"),
 		masterHandlers = require("./handlers/master"),
 		messageHandler,
 		playerHandler,
@@ -153,6 +154,8 @@ configuration._await
 	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
 	utilityHandler.registerNoun("playlist", models, handlers);
+	utilityHandler.registerNoun("journal", models, handlers);
+	utilityHandler.registerNoun("session", models, handlers);
 	utilityHandler.registerNoun("setting", models, handlers);
 	utilityHandler.registerNoun("ability", models, handlers);
 	utilityHandler.registerNoun("dataset", models, handlers);
@@ -185,6 +188,7 @@ configuration._await
 	
 	handlers.push(characterHandler.create);
 	handlers.push(masterHandlers.control);
+	handlers.push(journalHandler.update);
 	handlers.push(itemHandler.give);
 	handlers.push(itemHandler.take);
 	handlers.push(roomHandler.give);
