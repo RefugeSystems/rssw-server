@@ -9,11 +9,14 @@ class General {
 		if(!this.history) {
 			this.history = [];
 		}
+		if(!this.known_objects) {
+			this.known_objects = [];
+		}
 	}
 	
 	addHistory(event) {
 		this.history.unshift(event);
-		this.history.splice(maxHistoryLength);
+		this.history.splice(this.maxHistoryLength || 20);
 	}
 }
 

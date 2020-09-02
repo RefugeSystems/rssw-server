@@ -6,11 +6,11 @@
  * @module Handlers
  */
 
-var configuration = require("a-configuration");
-console.log("Utility: ", configuration.settings);
-
-var locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock;
-var changable = !locked;
+var GeneralConstructor = require("../models/_general.js"),
+	configuration = require("a-configuration"),
+	
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked;
 
 var maxHistoryLength = 100000,
 	trackedValues = [
@@ -82,7 +82,7 @@ var allowedToModify = function(universe, event) {
  * @deprecated
  * @static
  * @param {String} noun
- */
+ *
 module.exports.modifyHandler = function(noun) {
 	return function(universe, event) {
 		if(module.exports.generalPermission(event)) {
@@ -195,27 +195,57 @@ module.exports.modifyHandler = function(noun) {
 		}
 	};
 };
+/* */
 
 
+/**
+ * 
+ * @method processAsAdditive
+ * @param {Number | Array} a Value from the referenced record
+ * @param {Number | Array | Object} b Value coming in on which to update
+ * @return {Number | Array} The resulting value from the subtraction process.
+ */
 var processAsAdditive = function(a, b) {
 	if(typeof(a) === "number") {
 		return parseFloat((a + b).toFixed(2));
 	} else if(a instanceof Array) {
-		a.push(b);
+		if(b instanceof Array) {
+			a.push.apply(a, b);
+		} else {
+			a.push(b);
+		}
 		return a;
 	} else if(!a && typeof(b) === "number") {
 		return parseFloat(b.toFixed(2));
 	}
 };
 
+/**
+ * 
+ * @method processAsSubtractive
+ * @param {Number | Array} a Value from the referenced record
+ * @param {Number | Array | Object} b Value coming in on which to update
+ * @return {Number | Array} The resulting value from the subtraction process.
+ */
 var processAsSubtractive = function(a, b) {
-	var index;
+	var index,
+		x;
+	
 	if(typeof(a) === "number") {
 		return parseFloat((a - b).toFixed(2));
 	} else if(a instanceof Array) {
-		index = a.indexOf(b);
-		if(index !== -1) {
-			a.splice(index, 1);
+		if(b instanceof Array) {
+			for(x=0; x<b.length; x++) {
+				index = a.indexOf(b[x]);
+				if(index !== -1) {
+					a.splice(index, 1);
+				}
+			}
+		} else {
+			index = a.indexOf(b);
+			if(index !== -1) {
+				a.splice(index, 1);
+			}
 		}
 		return a;
 	} else if(!a && typeof(b) === "number") {
@@ -236,8 +266,9 @@ module.exports.detailSubProcessor = function(universe, event) {
 
 module.exports.detailProcessor = function(universe, event, processAs) {
 	// TODO: Individual Piece-Meal acquisitions
+	console.log("Detail Event: ", event);
 	var model = event.data,
-		delta = model.delta,
+		delta = model.delta || model._delta,
 		record = universe.nouns[model._type][model.id],
 		modifications = {},
 		notify = {},
@@ -246,7 +277,6 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 		x,
 		y;
 	
-	console.log("Detail Event: ", event);
 	
 	if(locked) {
 		console.log("Modification Rejected for Record[" + model.id + "]: Database Changes Locked");
@@ -288,6 +318,15 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 			}
 			record[keys[x]] = modifications[keys[x]];
 		}
+		
+		keys = Object.keys(model);
+		
+		for(x=0; x<keys.length; x++) {
+			if(keys[x][0] !== "_" && keys[x] !== "delta") {
+				modifications[keys[x]] = record[keys[x]] = model[keys[x]];
+			}
+		}
+		
 
 		console.log("Detail Event Modifications[" + record.id + "]: ", modifications);
 		universe.collections[model._type].updateOne({"id":record.id}, {"$set": modifications})
@@ -298,9 +337,19 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 //			}
 		})
 		.catch(function(err) {
-			console.log("Err: ", err);
+			console.log("Error saving detail modification: ", event, err);
+			universe.emit("error", {
+				"message": "Issues saving modification",
+				"time": Date.now(),
+				"event": event,
+				"cause": err
+			});
 		});
 //		.catch(universe.generalError);
+		
+		modifications.id = record.id;
+		modifications._type = model._type;
+		modifications.history = record.history;
 		
 		notify.relevant = record.owners || [];
 		if(record.owner) {
@@ -425,6 +474,7 @@ module.exports.modifyProcessor = function(universe, event) {
 		
 		Object.assign(record, model);
 		record._last = Date.now();
+		delete(record.delta);
 		delete(record.echo);
 		delete(record._id);
 		record.updated = Date.now();
@@ -533,6 +583,8 @@ module.exports.registerNoun = function(noun, models, handlers) {
 };
 
 
+	
+/*
 var GeneralConstructor = function(details, loading) {
 	Object.assign(this, details);
 	
@@ -544,9 +596,13 @@ var GeneralConstructor = function(details, loading) {
 	if(!this.history) {
 		this.history = [];
 	}
+	if(!this.known_objects) {
+		this.known_objects = [];
+	}
 	
 	this.addHistory = function(event) {
 		this.history.unshift(event);
-		this.history.splice(maxHistoryLength);
+		this.history.splice(this.maxHistoryLength || maxHistoryLength || 20);
 	};
 };
+/* */

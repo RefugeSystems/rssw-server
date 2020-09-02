@@ -48,6 +48,8 @@ module.exports = function(universe, details) {
 	 * @param {WebSocket} socket
 	 */
 	this.connect = function(socket) {
+		var state;
+		
 		player.last = Date.now();
 		connections.push(socket);
 		player.connections++;
@@ -122,7 +124,7 @@ module.exports = function(universe, details) {
 			});
 		};
 		
-		var state = {
+		state = {
 			"event": universe.currentState(player),
 			"type": "world:state",
 			"sent": Date.now(),
@@ -132,6 +134,18 @@ module.exports = function(universe, details) {
 		
 		universe.emit("player:connected", player);
 		socket.send(JSON.stringify(state));
+
+		state = {
+			"type": "player",
+			"id": player.id,
+			"time": Date.now(),
+			"modification": {
+				"connections": player.connections,
+				"last": player.last
+			}
+		}
+		console.log("Connection: ", state);
+		universe.emit("model:modified", state);
 	};
 	
 	/**
