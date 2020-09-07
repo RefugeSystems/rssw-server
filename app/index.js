@@ -171,6 +171,7 @@ configuration._await
 	utilityHandler.registerNoun("skill", models, handlers);
 	utilityHandler.registerNoun("note", models, handlers);
 	utilityHandler.registerNoun("book", models, handlers);
+	utilityHandler.registerNoun("type", models, handlers);
 	utilityHandler.registerNoun("item", models, handlers);
 	utilityHandler.registerNoun("race", models, handlers);
 	utilityHandler.registerNoun("room", models, handlers);
