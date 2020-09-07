@@ -136,5 +136,5 @@ module.exports = {
 				"cause": event
 			});
 		}
-	};
+	}
 };
