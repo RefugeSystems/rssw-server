@@ -17,11 +17,11 @@ closeSocket = function(connection, conf) {
  * @param {Array} models
  * @param {Array} handlers
  */
-module.exports = function(configuration, models, handlers) {
+module.exports = function(configuration, storage, models, handlers, support) {
 	this.version = configuration.package.version;
 	this.bounds = configuration.bounds;
 	this.setMaxListeners(200);
-	
+
 	var LogHandler = require("../handlers/system/logging"),
 		Player = require("../handlers/player/channel"),
 		constructor = this.constructor = {},
@@ -32,19 +32,12 @@ module.exports = function(configuration, models, handlers) {
 		passcodes = {},
 		modeling = {},
 		players = {},
-		generalError,
 		loaded = [],
 		support,
 		loading,
 		db,
 		x;
-	
-	if(configuration.supporting) {
-//		console.log("Supported: ", configuration.supporting);
-		support = configuration.mongo.connectDB(configuration.supporting.database);
-//		console.log("Support: ", support);
-	}
-	
+
 	if(!configuration.codes) {
 		configuration.codes = {};
 	}
@@ -65,7 +58,7 @@ module.exports = function(configuration, models, handlers) {
 		"events": ["player:modify:player"],
 		"process": Handlers.player.modify
 	});
-	
+
 	this.generalError = generalError = function(exception, message) {
 		universe.emit("error", {
 			"message": message || "General Error",
@@ -73,15 +66,14 @@ module.exports = function(configuration, models, handlers) {
 			"error": exception
 		});
 	};
-	
-	db = configuration.mongo.connectDB(configuration.core.database);
-	collections.player = db.collection("player");
+
+	collections.player = storage.collection("player");
 	for(x=0; x<models.length; x++) {
-		collections[models[x].type] = db.collection(models[x].type);
+		collections[models[x].type] = storage.collection(models[x].type);
 	}
-	collections._trash = db.collection("_trash");
-	
-	loading = collections.player.find().sort({"updated":-1}).toArray();
+	collections._trash = storage.collection("_trash");
+
+	loading = collections.player.getAll();
 	loading = loading.then(function(buffer) {
 		nouns.player = {};
 		for(x=0; x<buffer.length; x++) {
@@ -101,7 +93,7 @@ module.exports = function(configuration, models, handlers) {
 				});
 			}
 		}
-		return collections[models[0].type].find().toArray();
+		return collections[models[0].type].getAll();
 	});
 	models.forEach(function(load, i) {
 		constructor[load.type] = load.Model;
@@ -109,12 +101,12 @@ module.exports = function(configuration, models, handlers) {
 
 		loading = loading.then(function(buffer) {
 			nouns[load.type] = {};
-			
+
 			// Underlying Data Bases
 			if(support) {
 				return new Promise(function(done, fail) {
 					var col = support.collection(models[i].type);
-					col.find().sort({"updated":-1}).toArray().then(function(supporting) {
+					col.getAll().then(function(supporting) {
 						for(x=0; x<supporting.length; x++) {
 							if(!nouns[load.type][supporting[x].id]) {
 								supportLoad[supporting[x].id] = true;
@@ -158,15 +150,11 @@ module.exports = function(configuration, models, handlers) {
 			}
 			i = i + 1;
 			if(i < models.length) {
-				return collections[models[i].type].find().sort({"updated":-1}).toArray();
+				return collections[models[i].type].getAll();
 			}
 		});
 	});
 	loading.then(function() {
-		universe.emit("online", {
-			"time": Date.now()
-		});
-	}).then(function() {
 		handlers.forEach(function(handler) {
 			handler.events.forEach(function(eventType) {
 				universe.on(eventType, function(event) {
@@ -184,6 +172,10 @@ module.exports = function(configuration, models, handlers) {
 				});
 			});
 		});
+	}).then(function() {
+		universe.emit("online", {
+			"time": Date.now()
+		});
 	}).catch(function(err) {
 		universe.emit("error", {
 			"message": err.message || "Unspecified Error",
@@ -191,17 +183,10 @@ module.exports = function(configuration, models, handlers) {
 			"error": err
 		});
 	});
-	
-	var allowedToModify = function(event) {
-		return event.data && event.type && universe.nouns[event.type] && 
-			(event.player.master || // Master
-					universe.nouns[event.type][event.id].owner === event.player.id || // Owning Player
-					(universe.nouns[event.type][event.id].owners && universe.nouns[event.type][event.id].owners.indexOf(event.player.id) !== -1)); // One of many owners
-	};
-	
+
 	/**
-	 * 
-	 * 
+	 *
+	 *
 	 */
 	this.connectPlayer = function(connection) {
 		if(nouns && nouns.player) {
@@ -224,8 +209,8 @@ module.exports = function(configuration, models, handlers) {
 			closeSocket(connection, configuration.codes.notready);
 		}
 	};
-	
-	
+
+
 	this.disconnectPlayer = function(player, connection) {
 		if(player && connection) {
 			if(!passcodes[player.id] || passcodes[player.id] === connection.passcode) {
@@ -234,7 +219,7 @@ module.exports = function(configuration, models, handlers) {
 			}
 		}
 	};
-	
+
 	this.setPlayerPasscode = function(id, passcode) {
 		if(passcode) {
 			passcodes[id] = passcode;
@@ -242,9 +227,9 @@ module.exports = function(configuration, models, handlers) {
 			delete(passcodes[id]);
 		}
 	};
-	
+
 	/**
-	 * 
+	 *
 	 * @method currentState
 	 * @param {Player} [player] The player to which this update is relevant if any
 	 * @param {Number} [mark] The timestamp from which the state should be retrieved
@@ -253,7 +238,10 @@ module.exports = function(configuration, models, handlers) {
 		mark = mark || 0;
 		//console.log("Nouns: ", nouns);
 		return nouns; // TODO: Finish implementation for pruning
-		
+		// TOFIX: T1
+		// TODO T2
+
+
 //		var state;
 		if(!player && !mark) {
 			return nouns;

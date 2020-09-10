@@ -54,6 +54,7 @@ module.exports.generalPermission = function(event) {
 	return event && event.data && event.data.id && (event.player.master || event.player.id === event.data.id);
 };
 
+
 var allowedToModify = function(universe, event) {
 	if(locked) {
 		return false;
@@ -75,128 +76,6 @@ var allowedToModify = function(universe, event) {
 		return false;
 	}
 };
-
-/**
- * 
- * @method modifyHandler
- * @deprecated
- * @static
- * @param {String} noun
- *
-module.exports.modifyHandler = function(noun) {
-	return function(universe, event) {
-		if(module.exports.generalPermission(event)) {
-			delete(event.data.echo);
-			
-			if(!universe.nouns[noun]) {
-				universe.nouns[noun] = {};
-			}
-			
-			if(universe.nouns[noun][event.data.id]) {
-				var record = universe.nouns[noun][event.data.id],
-					model = event.data,
-					keys = [],
-					diffNew,
-					diffOld,
-					diffRes,
-					diff,
-					x,
-					y;
-
-				for(x=0; x<trackedValues.length; x++) {
-					if(record[trackedValues[x]] !== undefined && record[trackedValues[x]] !== null && event.data[trackedValues[x]] !== undefined && event.data[trackedValues[x]] !== record[trackedValues[x]]) {
-						record.history.push({
-							"type": "record_keeping",
-							"modified": trackedValues[x],
-							"previous": record[trackedValues[x]],
-							"current": event.data[trackedValues[x]],
-							"time": Date.now()
-						});
-					}
-				}
-				
-				
-				for(x=0; x<trackedArrays.length; x++) {
-					if(record[trackedArrays[x]] && event.data[trackedArrays[x]] && record[trackedArrays[x]].length !== event.data[trackedArrays[x]].length) {
-						diffNew = {};
-						diffOld = {};
-						diffRes = {};
-						// TODO: Finish adding up IDs and then computing difference
-						
-						for(y=0; y<record[trackedArrays[x]].length; y++) {
-							if(!diffOld[record[trackedArrays[x]][y]]) {
-								diffOld[record[trackedArrays[x]][y]] = 1;
-								keys.push(record[trackedArrays[x]][y]);
-							} else {
-								diffOld[record[trackedArrays[x]][y]]++;
-							}
-						}
-						for(y=0; y<event.data[trackedArrays[x]].length; y++) {
-							if(!diffNew[event.data[trackedArrays[x]][y]]) {
-								diffNew[event.data[trackedArrays[x]][y]] = 1;
-								keys.push(event.data[trackedArrays[x]][y]);
-							} else {
-								diffNew[event.data[trackedArrays[x]][y]]++;
-							}
-						}
-						
-						for(y=0; y<keys.length; y++) {
-							diffRes[keys[y]] = (parseInt(diffNew[keys[y]]) || 0) - (parseInt(diffOld[keys[y]]) || 0);
-							if(diffRes[keys[y]] !== 0) {
-								if(!diff) {
-									diff = {};
-								}
-								diff[keys[y]] = diffRes[keys[y]];
-							}
-						}
-						
-						if(diff) {
-							if(!record.history) {
-								record.history = [];
-							}
-							record.history.push({
-								"type": "record_acquired_or_loss",
-								"modified": trackedArrays[x],
-								"difference": diff,
-								"time": Date.now()
-								// TODO: Session & Universe Time support
-							})
-						}
-					}
-				}
-				
-				Object.assign(universe.nouns[noun][event.data.id], event.data);
-				universe.collections[noun].updateOne({"id":event.data.id}, {"$set":event.data})
-				.then(function(res) {
-					console.log("Update Res: ", res);
-					if(res.matchedCount === 0) {
-						universe.collections[noun].insertOne(universe.nouns[noun][event.data.id]);
-					}
-				})
-			} else {
-				universe.emit("warning", {
-					"message": "Creating Record for modification handler",
-					"event": event
-				});
-				if(universe.constructor[noun]) {
-					universe.nouns[noun][event.data.id] = new universe.constructor[noun](universe, event.data);
-				} else {
-					universe.nouns[noun][event.data.id] = JSON.parse(JSON.stringify(event.data));
-				}
-				universe.collections[noun].insertOne(universe.nouns[noun][event.data.id]);
-			}
-			universe.emit("model:modified", {
-				"data": universe.nouns[noun][event.data.id],
-				"emitted": Date.now(),
-				"echo": event.echo
-			});
-		} else {
-			console.log("Unable to create player, no ID found");
-		}
-	};
-};
-/* */
-
 
 /**
  * 
@@ -581,28 +460,3 @@ module.exports.registerNoun = function(noun, models, handlers) {
 		"events": ["player:delete:" + noun]
 	});
 };
-
-
-	
-/*
-var GeneralConstructor = function(details, loading) {
-	Object.assign(this, details);
-	
-	if(loading) {
-		this._type = loading.type;
-	} else {
-		console.warn("No Loading Specified");
-	}
-	if(!this.history) {
-		this.history = [];
-	}
-	if(!this.known_objects) {
-		this.known_objects = [];
-	}
-	
-	this.addHistory = function(event) {
-		this.history.unshift(event);
-		this.history.splice(this.maxHistoryLength || maxHistoryLength || 20);
-	};
-};
-/* */
