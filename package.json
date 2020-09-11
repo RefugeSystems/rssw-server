@@ -1,5 +1,5 @@
 {
-	"name": "rs-gamecore",
+	"name": "rsswx-server",
 	"version": "0.21.00",
 	"description": "",
 	"main": "index.js",
@@ -8,14 +8,14 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/RefugeSystems/GameCore.git"
+		"url": "git+https://github.com/RefugeSystems/rssw-server.git"
 	},
 	"author": "",
 	"license": "ISC",
 	"bugs": {
-		"url": "https://github.com/RefugeSystems/GameCore/issues"
+		"url": "https://github.com/RefugeSystems/rssw-server/issues"
 	},
-	"homepage": "https://github.com/RefugeSystems/GameCore#readme",
+	"homepage": "https://github.com/RefugeSystems/rssw-server#readme",
 	"dependencies": {
 		"a-configuration": "^1.1.2",
 		"bunyan": "^1.8.12",
