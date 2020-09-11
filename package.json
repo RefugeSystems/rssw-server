@@ -1,0 +1,36 @@
+{
+	"name": "rs-gamecore",
+	"version": "0.21.00",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/RefugeSystems/GameCore.git"
+	},
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/RefugeSystems/GameCore/issues"
+	},
+	"homepage": "https://github.com/RefugeSystems/GameCore#readme",
+	"dependencies": {
+		"a-configuration": "^1.1.2",
+		"bunyan": "^1.8.12",
+		"mongodb": "^3.3.2",
+		"root-require": "^0.3.1",
+		"rs-random": "^1.0.41",
+		"ws": "^7.1.2"
+	},
+	"devDependencies": {
+		"grunt": "^1.0.4",
+		"grunt-contrib-watch": "^1.1.0",
+		"gruntify-eslint": "^5.0.0",
+		"jasmine": "^3.5.0",
+		"jasmine-console-reporter": "^3.1.0",
+		"jasmine-core": "^3.5.0",
+		"load-grunt-tasks": "^5.1.0"
+	}
+}
