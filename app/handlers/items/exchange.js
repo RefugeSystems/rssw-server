@@ -85,7 +85,7 @@ var takeItem = function(parameters) {
 				});
 				parameters.universe.emit("model:modified", notify);
 //				console.log("Taken: ", parameters.event.data.item, parameters.source);
-				console.log("Taken:" + JSON.stringify(notify, null, 4));
+				console.log("Taken1:" + JSON.stringify(notify, null, 4));
 				done(parameters);
 			})
 			.catch(fail);
@@ -94,9 +94,10 @@ var takeItem = function(parameters) {
 			parameters.universe.collections[container._type].updateOne({"id":container.id}, {"$set":{"item": container.item}})
 			.then(function() {
 				notify = {};
-				notify.modification = {
-					"item": container.item
-				};
+//				notify.modification = {
+//					"item": container.item
+//				};
+				notify.modification.item = parameters.source.item;
 				notify.type = container._type;
 				notify.time = Date.now();
 				notify.id = container.id;
@@ -106,7 +107,7 @@ var takeItem = function(parameters) {
 				});
 				parameters.universe.emit("model:modified", notify);
 //				console.log("Taken: ", parameters.event.data.item, parameters.source);
-				console.log("Taken:" + JSON.stringify(notify, null, 4));
+				console.log("Taken2:" + JSON.stringify(notify, null, 4));
 				done(parameters);
 			})
 			.catch(fail);
@@ -327,7 +328,11 @@ module.exports.take = {
 							"time": Date.now()
 						});
 					}
-					notify.modification.item = item.id;
+//					notify.modification.item = item.id;
+					notify.modification = {
+						"history": target.history,
+						"item": target.item
+					};
 					notify.type = target._type;
 					notify.time = Date.now();
 					notify.id = target.id;
