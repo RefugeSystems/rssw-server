@@ -155,6 +155,10 @@ module.exports = function(configuration, storage, models, handlers, support) {
 		});
 	});
 	loading.then(function() {
+		// Guarentee Defaults Exist
+		// Types: star_system, station, planet, moon, city, marker, pilot, character, ship, room, building
+		// setting:current:session, location:universe
+	}).then(function() {
 		handlers.forEach(function(handler) {
 			handler.events.forEach(function(eventType) {
 				universe.on(eventType, function(event) {

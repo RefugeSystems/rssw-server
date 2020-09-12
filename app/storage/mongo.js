@@ -18,7 +18,7 @@ module.exports = function(configuration) {
 	 * @return {StorageCollection}
 	 */
 	this.collection = function(name) {
-		return connection.collection(name);
+		return new Collection(connection.collection(name));
 	};
 
 	var Collection = function(collection) {

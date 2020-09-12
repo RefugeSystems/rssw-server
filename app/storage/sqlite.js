@@ -20,7 +20,6 @@ var sqlite3 = require('sqlite3').verbose(),
  * @param {Object} configuration
  */
 module.exports = function(configuration) {
-
 	if(!configuration.database) {
 		configuration.database = {};
 	}
@@ -28,7 +27,7 @@ module.exports = function(configuration) {
 		configuration.database.type = "sqlite";
 	}
 	if(!configuration.database.file) {
-		configuration.database.type = ":memory:";
+		configuration.database.file = ":memory:";
 	}
 
 	var connection = this.connection = new sqlite3.Database(configuration.database.file, sqlite3[configuration.database.mode]); // ie. ("./sqldb/beta"),
@@ -55,8 +54,8 @@ module.exports = function(configuration) {
 		if(err && err.message.indexOf("no such table") !== -1) {
 			console.log("Initializing Tables");
 			connection
-			.run("create table _field (id text, _serialization text, name text, label text);", emptyArray, receiveError)
-			.run("create table _usage (noun text, field text);", emptyArray, receiveError)
+			.run("create table datapoint (id text, _serialization text, name text, label text);", emptyArray, receiveError)
+			.run("create table datamap (noun text, field text);", emptyArray, receiveError)
 			.run("create table player (id text, _serialization text, username text, name text, passcode text, email text, entity text, master boolean, description text, master_note text);", emptyArray, function(tableError) {
 				connection.run("insert into player(\"id\", \"_serialization\") values( $id , $serialization )", defaultMaster, function(playerError) {
 					if(tableError || playerError) {

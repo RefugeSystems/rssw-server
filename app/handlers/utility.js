@@ -365,9 +365,9 @@ module.exports.modifyProcessor = function(universe, event) {
 			universe.collections[model._type].updateOne({"id":record.id}, {"$set":record})
 			.then(function(res) {
 				// Create new record for things loaded from below
-				if(res.result.nModified === 0) {
-					universe.collections[model._type].insertOne(record);
-				}
+//				if(res.result.nModified === 0) {
+//					universe.collections[model._type].insertOne(record);
+//				}
 			})
 			.catch(universe.generalError);
 		}
@@ -415,7 +415,7 @@ module.exports.deleteProcessor = function(universe, event) {
 		universe.collections._trash.insertOne(model)
 		.then(function() {
 			console.log("Event: ", event);
-			delete(universe.nouns[event.data._type][event.data.id]);
+			delete(universe.nouns[event.data._class || event.data._type][event.data.id]);
 			return universe.collections[event.data._type].remove({"id":event.data.id});
 		})
 		.catch(universe.generalError);

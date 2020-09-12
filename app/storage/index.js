@@ -1,22 +1,32 @@
 
+module.exports = {};
+module.exports.getConfiguredConnection = function(configuration) {
+	if(configuration.database) {
+		if(configuration.database.type) {
+			configuration.database.type = configuration.database.type.toLowerCase()
+		}
+		switch(configuration.database.type) {
+			case "sqlitedb":
+			case "sqlite3":
+			case "sqlite":
+				return new (require("./sqlite"))(configuration);
+			case "mongodb":
+			case "mongo":
+				return new (require("./mongo"))(configuration);
+			default:
+				console.log("Unknown Storage Type");
+				return new Storage();
+		}
+	}
+};
+
 /**
  *
  * @class Storage
  * @constructor
  * @param {Configuration} configuration
  */
-module.exports = function(configuration) {
-
-	if(configuration.database) {
-		switch(configuration.database.type) {
-			case "sqlite":
-				return new require("./sqlite")(configuration);
-			case "mongodb":
-				return new require("./mongo")(configuration);
-			default:
-				console.log("Unknown Storage Type");
-		}
-	}
+var Storage = function() {
 
 	/**
 	 *
@@ -42,6 +52,15 @@ var StorageCollection = function() {
 	 * @return {Promise | Array}
 	 */
 	this.getAll = function() {
+		throw new Error("No Implementation Found");
+	};
+
+	/**
+	 *
+	 * @method get
+	 * @return {Promise | Object}
+	 */
+	this.get = function() {
 		throw new Error("No Implementation Found");
 	};
 

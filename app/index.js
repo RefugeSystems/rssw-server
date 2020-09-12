@@ -15,7 +15,7 @@ module.exports = function(configuration, models, handlers, log) {
 	require("./extensions/string.js");
 	require("./extensions/array.js");
 	var Universe = require("./universe"),
-		Storage = require("./storage/sqlite"), // require("./storage"),
+		Storage = require("./storage"), // require("./storage"),
 		WebSocket = require("ws"),
 		URL = require("url").URL,
 		HTTPS = require("https"),
@@ -35,7 +35,7 @@ module.exports = function(configuration, models, handlers, log) {
 	}
 	log = log || configuration.log || console;
 
-	storage = new Storage(configuration);
+	storage = Storage.getConfiguredConnection(configuration);
 	if(configuration.supportdb) {
 		support = new Storage(configuration.supportdb);
 	}
@@ -156,6 +156,7 @@ configuration._await
 		handlers = [],
 		models = [];
 
+	utilityHandler.registerNoun("widgetconfiguration", models, handlers);
 	utilityHandler.registerNoun("modifierattrs", models, handlers);
 	utilityHandler.registerNoun("modifierstats", models, handlers);
 	utilityHandler.registerNoun("archetype", models, handlers);
@@ -164,7 +165,7 @@ configuration._await
 	utilityHandler.registerNoun("knowledge", models, handlers);
 	utilityHandler.registerNoun("streamurl", models, handlers);
 	utilityHandler.registerNoun("itemtype", models, handlers);
-	utilityHandler.registerNoun("loglevel", models, handlers);
+//	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
 	utilityHandler.registerNoun("playlist", models, handlers);
 	utilityHandler.registerNoun("journal", models, handlers);
@@ -176,18 +177,18 @@ configuration._await
 //	utilityHandler.registerNoun("history", models, handlers);
 	utilityHandler.registerNoun("entity", models, handlers);
 	utilityHandler.registerNoun("effect", models, handlers);
-	utilityHandler.registerNoun("locale", models, handlers);
 //	utilityHandler.registerNoun("planet", models, handlers);
 	utilityHandler.registerNoun("widget", models, handlers);
 	utilityHandler.registerNoun("image", models, handlers);
 	utilityHandler.registerNoun("party", models, handlers);
 	utilityHandler.registerNoun("skill", models, handlers);
 	utilityHandler.registerNoun("note", models, handlers);
-	utilityHandler.registerNoun("book", models, handlers);
+//	utilityHandler.registerNoun("book", models, handlers);
 	utilityHandler.registerNoun("item", models, handlers);
 	utilityHandler.registerNoun("race", models, handlers);
 	utilityHandler.registerNoun("room", models, handlers);
 	utilityHandler.registerNoun("slot", models, handlers);
+	utilityHandler.registerNoun("type", models, handlers);
 	utilityHandler.registerNoun("sex", models, handlers);
 
 	models.push({
