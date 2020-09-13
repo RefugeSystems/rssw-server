@@ -1,0 +1,9 @@
+{
+	"mongo": {
+		"host": "host_server",
+		"port": 27017,
+		"connection": {
+			"useNewUrlParser": true
+		}
+	}
+}

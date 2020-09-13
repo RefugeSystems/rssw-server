@@ -1,0 +1,13 @@
+{
+	"CodeNotes": "https://github.com/Luka967/websocket-close-codes",
+	"codes": {
+		"noplayer": {
+			"reason": "Player not found",
+			"code": 4000
+		},
+		"notready": {
+			"reason": "Universe not ready",
+			"code": 1013
+		}
+	}
+}
