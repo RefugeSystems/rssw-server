@@ -85,8 +85,15 @@ var allowedToModify = function(universe, event) {
  * @return {Number | Array} The resulting value from the subtraction process.
  */
 var processAsAdditive = function(a, b) {
+	if(!a) {
+		if(typeof(b) === "number") {
+			return parseFloat(b.toFixed(2));
+		}
+		return b;
+	}
+	
 	if(typeof(a) === "number") {
-		return parseFloat((a + b).toFixed(2));
+		return parseFloat((a + (b || 0)).toFixed(2));
 	} else if(a instanceof Array) {
 		if(b instanceof Array) {
 			a.push.apply(a, b);
@@ -94,8 +101,8 @@ var processAsAdditive = function(a, b) {
 			a.push(b);
 		}
 		return a;
-	} else if(!a && typeof(b) === "number") {
-		return parseFloat(b.toFixed(2));
+	} else if(typeof(a) === "string") {
+		return a + b;
 	}
 };
 
@@ -127,10 +134,15 @@ var processAsSubtractive = function(a, b) {
 			}
 		}
 		return a;
+	} else if(typeof(a) === "string" && typeof(b) === "string") {
+		index = a.indexOf(b);
+		if(index !== -1) {
+			a = a.substring(0, index) + a.substring(index + b.length);
+		}
+		return a;
 	} else if(!a && typeof(b) === "number") {
 		return -1 * parseFloat(b.toFixed(2));
 	}
-	
 };
 
 
@@ -205,8 +217,11 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 				modifications[keys[x]] = record[keys[x]] = model[keys[x]];
 			}
 		}
-		
 
+		if(record.postProcess) {
+			record.postProcess();
+		}
+		
 		console.log("Detail Event Modifications[" + record.id + "]: ", modifications);
 		universe.collections[model._type].updateOne({"id":record.id}, {"$set": modifications})
 		.then(function(res) {
@@ -276,7 +291,8 @@ module.exports.modifyProcessor = function(universe, event) {
 			y;
 		
 		if(!record) {
-			record = universe.nouns[model._type][model.id] = {};
+			// TODO: Convert to an initialization to maintain classing
+			record = universe.nouns[model._type][model.id] = new universe.constructor[model._type](model);
 			insert = true;
 		} else {
 			insert = false;
@@ -357,6 +373,11 @@ module.exports.modifyProcessor = function(universe, event) {
 		delete(record.echo);
 		delete(record._id);
 		record.updated = Date.now();
+
+		if(record.postProcess) {
+			record.postProcess();
+		}
+		
 		if(insert) {
 			record.created = record.updated;
 			universe.collections[model._type].insertOne(record)

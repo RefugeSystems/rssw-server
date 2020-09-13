@@ -161,6 +161,8 @@ configuration._await
 	utilityHandler.registerNoun("modifierstats", models, handlers);
 	utilityHandler.registerNoun("archetype", models, handlers);
 	utilityHandler.registerNoun("condition", models, handlers);
+	utilityHandler.registerNoun("datapoint", models, handlers);
+	utilityHandler.registerNoun("datausage", models, handlers);
 	utilityHandler.registerNoun("inventory", models, handlers);
 	utilityHandler.registerNoun("knowledge", models, handlers);
 	utilityHandler.registerNoun("streamurl", models, handlers);
@@ -168,6 +170,7 @@ configuration._await
 //	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
 	utilityHandler.registerNoun("playlist", models, handlers);
+	utilityHandler.registerNoun("maneuver", models, handlers);
 	utilityHandler.registerNoun("journal", models, handlers);
 	utilityHandler.registerNoun("session", models, handlers);
 	utilityHandler.registerNoun("setting", models, handlers);
@@ -179,6 +182,7 @@ configuration._await
 	utilityHandler.registerNoun("effect", models, handlers);
 //	utilityHandler.registerNoun("planet", models, handlers);
 	utilityHandler.registerNoun("widget", models, handlers);
+	utilityHandler.registerNoun("event", models, handlers);
 	utilityHandler.registerNoun("image", models, handlers);
 	utilityHandler.registerNoun("party", models, handlers);
 	utilityHandler.registerNoun("skill", models, handlers);
@@ -191,15 +195,6 @@ configuration._await
 	utilityHandler.registerNoun("type", models, handlers);
 	utilityHandler.registerNoun("sex", models, handlers);
 
-	models.push({
-		"Model": require("./models/party.js"),
-		"type": "party"
-	});
-	models.push({
-		"Model": require("./models/entity.js"),
-		"type": "entity"
-	});
-
 	handlers.push(characterHandler.create);
 	handlers.push(masterHandlers.control);
 	handlers.push(journalHandler.update);
@@ -207,12 +202,23 @@ configuration._await
 	handlers.push(itemHandler.take);
 	handlers.push(roomHandler.give);
 	handlers.push(roomHandler.take);
+	
+	handlers.push(require("./handlers/entity/rolled"));
+
+	models.push({
+		"Model": require("./models/entity.js"),
+		"type": "entity"
+	});
+	models.push({
+		"Model": require("./models/party.js"),
+		"type": "party"
+	});
+	models.push({
+		"Model": require("./models/event.js"),
+		"type": "event"
+	});
 
 	new module.exports(configuration, models, handlers);
-
-
-
-
 }).catch(function(err) {
 	console.log("Err: ", err);
 });

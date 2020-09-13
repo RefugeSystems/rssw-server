@@ -179,6 +179,7 @@ module.exports = function(universe, details) {
 	standardEvents = [
 		"model:modified",
 		"player:whisper",
+		"entity:rolled",
 		"model:deleted",
 		"control",
 	];

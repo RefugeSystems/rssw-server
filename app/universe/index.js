@@ -155,7 +155,7 @@ module.exports = function(configuration, storage, models, handlers, support) {
 		});
 	});
 	loading.then(function() {
-		// Guarentee Defaults Exist
+		// Guarantee Defaults Exist
 		// Types: star_system, station, planet, moon, city, marker, pilot, character, ship, room, building
 		// setting:current:session, location:universe
 	}).then(function() {
