@@ -1,9 +1,9 @@
 var General = require("./_general.js");
 
-class Party extends General {
+class Event extends General {
 	constructor(details, loading) {
 		super(details, loading);
-		this._class = "party";
+		this._class = "event";
 		Object.assign(this, details);
 		if(loading) {
 			this._type = loading.type;
@@ -22,17 +22,17 @@ class Party extends General {
 		var buffer,
 			x;
 		
-		if(this.entity && this.entity.length) {
+		if(this.involved && this.involved.length) {
 			buffer = {};
-			for(x=0; x<this.entity.length; x++) {
-				if(buffer[this.entity[x]]) {
-					this.entity.splice(x--);
+			for(x=0; x<this.involved.length; x++) {
+				if(buffer[this.involved[x]]) {
+					this.involved.splice(x--);
 				} else {
-					buffer[this.entity[x]] = true;
+					buffer[this.involved[x]] = true;
 				}
 			}
 		}
 	}
 }
 
-module.exports = Party;
+module.exports = Event;

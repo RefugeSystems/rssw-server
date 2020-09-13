@@ -68,3 +68,8 @@ typings/
 
 # Utility Scripts
 /scripts
+test.js
+
+# Test Data
+betadb
+*.sqldb

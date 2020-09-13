@@ -1,5 +1,6 @@
 class General {
 	constructor(details, loading) {
+		this._class = "general";
 		Object.assign(this, details);
 		if(loading) {
 			this._type = loading.type;
