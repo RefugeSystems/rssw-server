@@ -160,7 +160,8 @@ var giveItem = function(parameters) {
 module.exports.give = {
 	"events": ["player:give:item"],
 	"process": function(universe, event) {
-		var source = universe.nouns.inventory[event.data.inventory] || universe.nouns.entity[event.data.source],
+//		var source = universe.nouns.inventory[event.data.inventory] || universe.nouns.entity[event.data.source],
+		var source = universe.nouns.entity[event.data.source],
 			item = universe.nouns.item[event.data.item],
 			parameters = {},
 			receiving,
@@ -169,8 +170,8 @@ module.exports.give = {
 		
 		if(receiving = universe.nouns.entity[event.data.target]) {
 			receiving._type = "entity";
-		} else if(receiving = universe.nouns.inventory[event.data.target]) {
-			receiving._type = "inventory";
+//		} else if(receiving = universe.nouns.inventory[event.data.target]) {
+//			receiving._type = "inventory";
 		} else if(receiving = universe.nouns.item[event.data.target]) {
 			receiving._type = "item";
 		}
@@ -294,8 +295,8 @@ module.exports.take = {
 		
 		if(target = universe.nouns.entity[event.data.target]) {
 			target._type = "entity";
-		} else if(target = universe.nouns.inventory[event.data.target]) {
-			target._type = "inventory";
+//		} else if(target = universe.nouns.inventory[event.data.target]) {
+//			target._type = "inventory";
 		} else if(target = universe.nouns.item[event.data.target]) {
 			target._type = "item";
 		}

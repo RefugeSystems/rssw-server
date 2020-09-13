@@ -1,4 +1,6 @@
 
+// TODO: Move to storage mongo.js module
+
 var mongo = require("mongodb");
 var MongoClient = mongo.MongoClient;
 mongo.Promise = global.Promise;

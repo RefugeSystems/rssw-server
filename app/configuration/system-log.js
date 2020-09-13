@@ -1,4 +1,6 @@
 
+// Note: Consider moving into stoarage or some other location
+
 var Bunyan = require("bunyan");
 var root = require("root-require")("package.json");
 var defaults = {

@@ -69,7 +69,7 @@ module.exports = function(universe, details) {
 			};
 
 			if(message.event !== "ping") {
-//				console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
+				console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
 			}
 			message.player = player;
 			
