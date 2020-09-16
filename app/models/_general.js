@@ -5,7 +5,7 @@ class General {
 		if(loading) {
 			this._type = loading.type;
 		} else {
-			console.warn("No Loading Specified");
+			this._type = this.constructor.name.toLowerCase();
 		}
 		if(!this.history) {
 			this.history = [];
@@ -14,7 +14,7 @@ class General {
 			this.known_objects = [];
 		}
 	}
-	
+
 	addHistory(event) {
 		this.history.unshift(event);
 		this.history.splice(this.maxHistoryLength || 20);

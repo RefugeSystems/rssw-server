@@ -1,5 +1,8 @@
 
-var sqlite3 = require('sqlite3').verbose(),
+var Storage = require("./index"),
+
+	sqlite3 = require('sqlite3').verbose(),
+
 	emptyArray = [],
 	defaultMaster = {
 		"$id": "master",
@@ -17,284 +20,256 @@ var sqlite3 = require('sqlite3').verbose(),
  * @class StorageSQLite
  * @extends Storage
  * @constructor
- * @param {Object} configuration
+ * @param {Object} settings For this specific instance.
+ * @param {Object} configuration For the application as a whole.
  */
-module.exports = function(configuration) {
-	if(!configuration.database) {
-		configuration.database = {};
-	}
-	if(!configuration.database.type) {
-		configuration.database.type = "sqlite";
-	}
-	if(!configuration.database.file) {
-		configuration.database.file = ":memory:";
-	}
+class StorageSQLite extends Storage {
+	constructor(settings, configuration) {
+		super(settings, configuration);
 
-	var connection = this.connection = new sqlite3.Database(configuration.database.file, sqlite3[configuration.database.mode]); // ie. ("./sqldb/beta"),
-		ready = false,
-		waiting = [],
-		errors = [];
-
-	var receiveError = function(err) {
-		if(err) {
-			errors.push(err);
+		this.log.debug("Settings: ", settings);
+		if(!settings.file) {
+			this.log.warn("Leveraging Memory for Storage");
+			settings.file = ":memory:";
 		}
-	};
 
-	var setReady = function() {
-		ready = true;
-		console.log(waiting.length + " Calls delayed during SQLite Connection initialization");
-		for(var x=0; x<waiting.length; x++) {
-			waiting[x]();
-		}
-		waiting.splice(0);
-	};
+		this.connection = new sqlite3.Database(settings.file, sqlite3[settings.mode]); // ie. ("./sqldb/beta")
 
-	connection.all("select * from player;", emptyArray, function(err, rows) {
-		if(err && err.message.indexOf("no such table") !== -1) {
-			console.log("Initializing Tables");
-			connection
-			.run("create table datapoint (id text, _serialization text, name text, label text);", emptyArray, receiveError)
-			.run("create table datamap (noun text, field text);", emptyArray, receiveError)
-			.run("create table player (id text, _serialization text, username text, name text, passcode text, email text, entity text, master boolean, description text, master_note text);", emptyArray, function(tableError) {
-				connection.run("insert into player(\"id\", \"_serialization\") values( $id , $serialization )", defaultMaster, function(playerError) {
-					if(tableError || playerError) {
-						console.log("Initialization Failed: ", tableError || playerError);
-					} else {
-						setReady();
-					}
+		// Check database existance and completeness
+		this.connection.all("select * from player;", emptyArray, (err, rows) => {
+			if(err && err.message.indexOf("no such table") !== -1) {
+				this.log.debug("Initializing Tables");
+				this.connection
+				.run("create table datapoint (id text, _serialization text, name text, label text);", emptyArray, this.receiveError)
+				.run("create table datamap (noun text, field text);", emptyArray, this.receiveError)
+				.run("create table player (id text, _serialization text, username text, name text, passcode text, email text, entity text, master boolean, description text, master_note text);", emptyArray, (tableError) => {
+					this.connection.run("insert into player(\"id\", \"_serialization\") values( $id , $serialization )", defaultMaster, (playerError) => {
+						if(tableError || playerError) {
+							this.receiveError(playerError);
+							this.receiveError(tableError);
+							this.log.error("Initialization Failed: ", tableError || playerError);
+						} else {
+							this.setReady();
+						}
+					});
 				});
-			});
-		} else {
-			setReady();
-		}
-	});
-
-	/**
-	 *
-	 * @class StorageCollectionSQLite
-	 * @constructor
-	 * @extends StorageCollection
-	 * @param  {String} name
-	 */
-	var Collection = function(name) {
-		var cReady = false,
-			cWaiting = [],
-			tracked = {},
-			errors = {},
-			fields = [];
-
-		var setCollectionReady = function() {
-			cReady = true;
-			console.log(cWaiting.length + " Calls delayed during SQLite Collection[" + name + "] initialization");
-			for(var x=0; x<cWaiting.length; x++) {
-				cWaiting[x]();
-			}
-			cWaiting.splice(0);
-		};
-
-		var initializeCollection = function() {
-			connection.all("select * from " + name + ";", emptyArray, function(err, rows) {
-				if(err && err.message.indexOf("no such table") !== -1) {
-					console.log("Initializing Collection: " + name);
-					connection
-					.run("create table " + name + " (id text, _serialization text, name text, description text, master_note text);", emptyArray, function(err) {
-						if(err) {
-							console.log("Collection Failed to Initialize: " + name, err);
-						} else {
-							setCollectionReady();
-						}
-					});
-				} else {
-					setCollectionReady();
-				}
-			});
-		};
-
-		var parameterize = function(record) {
-			return {
-				"$id": record.id,
-				"$serialization": JSON.stringify(record)
-			};
-		};
-
-		if(ready) {
-			initializeCollection();
-		} else {
-			waiting.push(initializeCollection);
-		}
-
-		this.get = function(id) {
-			return get(id);
-		};
-
-		this.getAll = function(query) {
-			return new Promise(function(done, fail) {
-				var process = function() {
-					var result = [],
-						loading,
-						now,
-						x;
-
-					connection.all("select * from " + name + ";", emptyArray, function(err, rows) {
-						if(err) {
-							fail(err);
-						} else {
-							// TODO: Extend field processing to leverage columns instead of direct serialization
-							now = Date.now();
-							for(x=0; x<rows.length; x++) {
-								try {
-									loading = JSON.parse(rows[x]._serialization);
-									if(loading && loading.id) {
-										tracked[loading.id] = now;
-										loading.loaded = now;
-										result.push(loading);
-									}
-								} catch(e) {
-									console.log("Failed to load row for collection[" + name + "]: ", rows[x]);
-									errors(rows[x])
-								}
-							}
-							done(result);
-						}
-					});
-				};
-
-				if(cReady) {
-					process();
-				} else {
-					cWaiting.push(process);
-				}
-			});
-		};
-
-		this.insertOne = function(noun) {
-			if(tracked[noun.id]) {
-				return update(noun);
 			} else {
-				return insert(noun);
+				this.setReady();
 			}
-		};
+		});
+	}
 
-		this.updateOne = function(query, noun) {
-			return update(query, noun);
-		};
+	get type() {
+		return "sqlite";
+	}
 
-		this.remove = function(noun) {
-			return remove(noun);
-		};
+	collection(name) {
+		return new StorageCollectionSQLite(this, name);
+	}
+}
 
-		var get = function(id) {
-			return new Promise(function(done, fail) {
-				var process = function() {
-					connection.all("select _serialization from " + name + " where id = $id ;", {"$id":id}, function(err, rows) {
-						if(err) {
-							fail(err);
-						} else {
-							if(rows.length) {
-								done(JSON.parse(rows[0]._serialization));
-							} else {
-								done(null);
-							}
-						}
-					});
-				};
+/**
+ *
+ * @class StorageCollectionSQLite
+ * @constructor
+ * @extends StorageCollection
+ * @param  {String} name
+ */
 
-				if(cReady) {
-					process();
-				} else {
-					cWaiting.push(process);
-				}
-			});
-		};
 
-		var insert = function(noun) {
-			return new Promise(function(done, fail) {
-				var process = function() {
-					connection.run("insert into " + name + "(\"id\", \"_serialization\") values( $id , $serialization );", parameterize(noun), function(err) {
-						if(err) {
-							fail(err);
-						} else {
-							done(noun);
-						}
-					});
-				};
-
-				if(cReady) {
-					process();
-				} else {
-					cWaiting.push(process);
-				}
-			});
-		};
-
-		// TODO: Add "modification" as a process, either new StorageCollection functionality or processing $set "correctly". New method would be better to move away from MongoDB
-		// 		though that will likely make this update call obsolete
-		var update = function(query, noun) {
-			if(query && !noun) {
-				noun = query;
-				query = undefined;
-			}
-
-			if(noun.$set) {
-				// TODO: Once field expansion is present, expand this to handle piecemeal field updates to the SQL columns correctly
-				noun = noun.$set;
-			}
-
-			return new Promise(function(done, fail) {
-				var process = function() {
-					// TODO: Align parameterization better for usage of query or (more likely) drop query portion, since record should always be known
-					var parameters = parameterize(noun);
-					if(query) {
-						parameters["$id"] = query.id;
-					}
-
-					connection.run("update " + name + " set _serialization = $serialization where id = $id ;", parameters, function(err) {
-						if(err) {
-							fail(err);
-						} else {
-							done(noun);
-						}
-					});
-				};
-
-				if(cReady) {
-					process();
-				} else {
-					cWaiting.push(process);
-				}
-			});
-		};
-
-		var remove = function(noun) {
-			return new Promise(function(done, fail) {
-				var process = function() {
-					connection.run("delete from " + name + " where id = $id ;", {"$id": noun.id}, function(err) {
-						if(err) {
-							fail(err);
-						} else {
-							done(noun);
-						}
-					});
-				};
-
-				if(cReady) {
-					process();
-				} else {
-					cWaiting.push(process);
-				}
-			});
-		};
-	};
-
-	/**
-	 *
-	 *
-	 * @method collection
-	 * @param {String} name
-	 * @return {StorageCollection}
-	 */
-	this.collection = function(name) {
-		return new Collection(name);
+var parameterize = function(record) {
+	return {
+		"$id": record.id,
+		"$serialization": JSON.stringify(record)
 	};
 };
+
+class StorageCollectionSQLite extends Storage.Collection {
+	constructor(storage, name) {
+		super(storage, name);
+		this.connection = storage.connection;
+		this.log = storage.log;
+		this.name = name;
+
+		var initializeCollection = () => {
+			this.log.debug("Initializing Collection: " + name, {"collection": name});
+			this.connection.all("select * from " + this.name + ";", emptyArray, (err, rows) => {
+				if(err && err.message.indexOf("no such table") !== -1) {
+					this.log.debug("Initializing Collection: " + this.name);
+					this.connection
+					.run("create table " + this.name + " (id text, _serialization text, name text, description text, master_note text);", emptyArray, (err) => {
+						if(err) {
+							this.log.error("Collection Failed to Initialize: " + this.name, err);
+						} else {
+							this.setReady();
+						}
+					});
+				} else {
+					this.setReady();
+				}
+			});
+		};
+
+		if(storage.ready) {
+			initializeCollection();
+		} else {
+			storage._waiting.push(initializeCollection);
+		}
+	}
+
+	getAll(query) {
+		return new Promise((done, fail) => {
+			var process = () => {
+				var result = [],
+					loading,
+					now,
+					x;
+
+				this.connection.all("select * from " + this.name + ";", emptyArray, (err, rows) => {
+					if(err) {
+						fail(err);
+					} else {
+						// TODO: Extend field processing to leverage columns instead of direct serialization
+						now = Date.now();
+						for(x=0; x<rows.length; x++) {
+							try {
+								loading = JSON.parse(rows[x]._serialization);
+								if(loading && loading.id) {
+									this._tracked[loading.id] = now;
+									loading.loaded = now;
+									result.push(loading);
+								}
+							} catch(e) {
+								this.log.error("Failed to load row for collection[" + name + "]: " + JSON.stringify(rows[x]) + exceptionToString(e));
+							}
+						}
+						done(result);
+					}
+				});
+			};
+
+			if(this.ready) {
+				process();
+			} else {
+				this._waiting.push(process);
+			}
+		});
+	}
+
+	insertOne(noun) {
+		if(this._tracked[noun.id]) {
+			return this.update(noun);
+		} else {
+			return this.insert(noun);
+		}
+	}
+
+	insert(noun) {
+		return new Promise((done, fail) => {
+			var process = () => {
+				this.connection.run("insert into " + this.name + "(\"id\", \"_serialization\") values( $id , $serialization );", parameterize(noun), (err) => {
+					if(err) {
+						fail(err);
+					} else {
+						this._tracked[noun.id] = Date.now();
+						done(noun);
+					}
+				});
+			};
+
+			if(this.ready) {
+				process();
+			} else {
+				this._waiting.push(process);
+			}
+		});
+	}
+
+	updateOne(query, noun) {
+		return this.update(query, noun);
+	}
+
+	update(query, noun) {
+		if(query && !noun) {
+			noun = query;
+			query = undefined;
+		}
+
+		if(noun.$set) {
+			// TODO: Once field expansion is present, expand this to handle piecemeal field updates to the SQL columns correctly
+			noun = noun.$set;
+		}
+
+		return new Promise((done, fail) => {
+			var process = () => {
+				// TODO: Align parameterization better for usage of query or (more likely) drop query portion, since record should always be known
+				var parameters = parameterize(noun);
+				if(query) {
+					parameters["$id"] = query.id;
+				}
+
+				this.connection.run("update " + this.name + " set _serialization = $serialization where id = $id ;", parameters, (err) => {
+					if(err) {
+						fail(err);
+					} else {
+						this._tracked[noun.id] = Date.now();
+						done(noun);
+					}
+				});
+			};
+
+			if(this.ready) {
+				process();
+			} else {
+				this._waiting.push(process);
+			}
+		});
+	}
+
+	remove(noun) {
+		return new Promise((done, fail) => {
+			var process = () => {
+				this.connection.run("delete from " + this.name + " where id = $id ;", {"$id": noun.id}, (err) => {
+					if(err) {
+						fail(err);
+					} else {
+						delete(this._tracked[noun.id]);
+						done(noun);
+					}
+				});
+			};
+
+			if(this.ready) {
+				process();
+			} else {
+				this._waiting.push(process);
+			}
+		});
+	};
+
+	get(id) {
+		return new Promise((done, fail) => {
+			var process = function() {
+				this.connection.all("select _serialization from " + this.name + " where id = $id ;", {"$id":id}, (err, rows) => {
+					if(err) {
+						fail(err);
+					} else {
+						if(rows.length) {
+							done(JSON.parse(rows[0]._serialization));
+						} else {
+							done(null);
+						}
+					}
+				});
+			};
+
+			if(this.ready) {
+				process();
+			} else {
+				this._waiting.push(process);
+			}
+		});
+	}
+}
+
+module.exports = StorageSQLite;

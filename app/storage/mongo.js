@@ -3,11 +3,11 @@
  *
  *
  * @class StorageMongo
- * @extends Storage
  * @constructor
+ * @deprecated
  * @param {Object} configuration
  */
-module.exports = function(configuration) {
+module.exports = function(settings, configuration) {
 
 	var connection = configuration.mongo.connectDB(configuration.core.database);
 

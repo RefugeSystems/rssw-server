@@ -1,5 +1,3 @@
-
-
 /**
  *
  *
@@ -20,6 +18,7 @@ module.exports = function(configuration, models, handlers, log) {
 		URL = require("url").URL,
 		HTTPS = require("https"),
 		HTTP = require("http"),
+		path = require("path"),
 		fs = require("fs"),
 
 		options = {},
@@ -28,31 +27,57 @@ module.exports = function(configuration, models, handlers, log) {
 		storage,
 		support,
 		server,
-		log;
+		log,
+		x;
 
 	if(!configuration) {
 		configuration = require("a-configuration");
 	}
 	log = log || configuration.log || console;
 
-	storage = Storage.getConfiguredConnection(configuration);
-	if(configuration.supportdb) {
-		support = new Storage(configuration.supportdb);
+	storage = Storage.getConfiguredConnection(configuration.database, configuration);
+	if(configuration.database_supporting) {
+		support = [];
+		for(x=configuration.database_supporting.length - 1; 0 <= x; x--) {
+			support.push(Storage.getConfiguredConnection(configuration.database_supporting[x], configuration));
+		}
 	}
 
 	universe = new Universe(configuration, storage, models, handlers, support);
 	universe.on("error", function(event) {
-		log.error(event);
+		var data = {};
+		data.type = "error";
+		data.origin = "universe";
+		data.time = new Date();
+		data.date = data.time.toISOString();
+		data.time = data.time.getTime();
+		data.event = event;
+		log.error(data);
 	});
 	universe.on("online", function(event) {
-		log.info(event);
+		var data = {};
+		data.type = "online";
+		data.origin = "universe";
+		data.time = new Date();
+		data.date = data.time.toISOString();
+		data.time = data.time.getTime();
+		data.event = event;
+		data.port = configuration.server.port;
+		log.info(data);
 	});
 	universe.on("warning", function(event) {
-		log.warn(event);
+		var data = {};
+		data.type = "warning";
+		data.origin = "universe";
+		data.time = new Date();
+		data.date = data.time.toISOString();
+		data.time = data.time.getTime();
+		data.event = event;
+		log.warn(data);
 	});
 
 	if(configuration.server.key) {
-		options.ca = fs.readFileSync(configuration.server.interm || configuration.server.certificateAuthority || configuration.server.ca, "utf-8");
+		options.ca = fs.readFileSync(configuration.server.interm || configuration.server.certificate_authority || configuration.server.certificateAuthority || configuration.server.ca, "utf-8");
 		options.cert = fs.readFileSync(configuration.server.certificate || configuration.server.crt || configuration.server.public, "utf-8");
 		options.key = fs.readFileSync(configuration.server.privateKey || configuration.server.key || configuration.server.private, "utf-8");
 		server = HTTPS.createServer(options);
@@ -94,6 +119,88 @@ module.exports = function(configuration, models, handlers, log) {
 		universe.connectPlayer(connection);
 	});
 
+	if(configuration.server.web_root) {
+		// __dirname is the app folder for this script, so indexing up one level to get the root where the "standard included" UI folder will be
+		if(configuration.server.web_root[0] === "/" || configuration.server.web_root[1] === ":") {
+			configuration.server.web_root = path.normalize(configuration.server.web_root);
+		} else {
+			configuration.server.web_root = path.normalize(__dirname + path.sep + ".." + path.sep + configuration.server.web_root);
+		}
+	}
+
+	// Implement a simple request server to serve the UI if desired
+	// TODO: Update build process to push a new Repo of the Server+UI with this configured in example configurations
+	server.on("request", function(request, response) {
+		if(configuration.server.redirect) {
+			response.setHeader("Location", configuration.server.redirect);
+			response.statusMessage = "See UI Site";
+			response.statusCode = 301;
+			response.end();
+		} else if(request.method.toLowerCase() === "get" && configuration.server.web_root && request.url.indexOf("..") === -1) {
+			var pathing,
+				type;
+			if(request.url === "/") {
+				pathing = path.normalize(configuration.server.web_root + request.url + "index.html");
+			} else {
+				pathing = path.normalize(configuration.server.web_root + request.url);
+			}
+
+			// TODO: Fold into standard logging at debug level
+			console.log("GET[" + request.url + "]: " + pathing);
+			if(pathing.startsWith(configuration.server.web_root)) {
+				fs.readFile(pathing, function(err, data) {
+					if(err) {
+						response.statusMessage = "Requested File Not Found";
+						response.statusCode = 404;
+						response.end();
+					} else {
+						type = path.extname(pathing);
+						if(type) {
+							type = type.substring(1);
+						}
+						switch(type) {
+							case "js":
+								response.setHeader("Content-Type", "text/javascript");
+								break;
+							case "json":
+								response.setHeader("Content-Type", "application/json");
+								break;
+							case "htm":
+								type = "html";
+							case "css":
+							case "html":
+								response.setHeader("Content-Type", "text/" + type);
+								break;
+							case "jpg":
+								type = "jpeg";
+							case "jpeg":
+							case "png":
+							case "gif":
+								response.setHeader("Content-Type", "image/" + type);
+								break;
+							case "svg":
+								response.setHeader("Content-Type", "image/svg+xml");
+								break;
+							default:
+								response.setHeader("Content-Type", "text/plain");
+								break;
+						}
+						response.statusCode = 200;
+						response.end(data);
+					}
+				});
+			} else {
+				response.statusMessage = "Malformed URL";
+				response.statusCode = 400;
+				response.end();
+			}
+		} else {
+			response.statusMessage = "Invalid Request Received";
+			response.statusCode = 400;
+			response.end();
+		}
+	});
+
 	server.on("upgrade", function(request, socket, head) {
 		request.url = new URL("http://self" + request.url);
 //		console.log("Upgrade URL: ", request.url);
@@ -133,13 +240,9 @@ module.exports = function(configuration, models, handlers, log) {
 	});
 
 	server.listen(configuration.server.port);
-	console.log("Listening: " + configuration.server.port);
 };
 
 var configuration = require("a-configuration");
-
-console.log("Test: " + Object.keys(configuration));
-//console.log("Testing: ", configuration.connections.database.test.find());
 
 configuration._await
 .then(function() {
@@ -178,13 +281,10 @@ configuration._await
 	utilityHandler.registerNoun("dataset", models, handlers);
 //	utilityHandler.registerNoun("loadout", models, handlers);
 //	utilityHandler.registerNoun("history", models, handlers);
-	utilityHandler.registerNoun("entity", models, handlers);
 	utilityHandler.registerNoun("effect", models, handlers);
 //	utilityHandler.registerNoun("planet", models, handlers);
 	utilityHandler.registerNoun("widget", models, handlers);
-	utilityHandler.registerNoun("event", models, handlers);
 	utilityHandler.registerNoun("image", models, handlers);
-	utilityHandler.registerNoun("party", models, handlers);
 	utilityHandler.registerNoun("skill", models, handlers);
 	utilityHandler.registerNoun("note", models, handlers);
 	utilityHandler.registerNoun("type", models, handlers);
@@ -192,7 +292,6 @@ configuration._await
 	utilityHandler.registerNoun("race", models, handlers);
 	utilityHandler.registerNoun("room", models, handlers);
 	utilityHandler.registerNoun("slot", models, handlers);
-	utilityHandler.registerNoun("type", models, handlers);
 	utilityHandler.registerNoun("sex", models, handlers);
 
 	handlers.push(characterHandler.create);
@@ -202,7 +301,7 @@ configuration._await
 	handlers.push(itemHandler.take);
 	handlers.push(roomHandler.give);
 	handlers.push(roomHandler.take);
-	
+
 	handlers.push(require("./handlers/entity/rolled"));
 
 	models.push({

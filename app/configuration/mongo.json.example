@@ -1,5 +1,9 @@
 {
 	"mongo": {
+		"disabled": true
+	},
+	-- OR --
+	"mongo": {
 		"host": "host_server",
 		"port": 27017,
 		"connection": {

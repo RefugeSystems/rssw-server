@@ -2,11 +2,63 @@ var EventEmitter = require("events").EventEmitter,
 	Handlers = require("../handlers"),
 	Random = require("rs-random"),
 	util = require("util"),
-	closeSocket;
+	closeSocket,
+	basics;
 
 closeSocket = function(connection, conf) {
-	connection.close(conf.code, conf.reacon);
+	connection.close(conf.code, conf.reason);
 };
+
+/**
+ * Maps types to an array of objects to ensure exist even
+ * if a copy was not found in the loaded storage objects.
+ *
+ * These are used to fill small gaps in the UI where the
+ * loaded object is needed, such as the Master View location
+ * generation in the Map view.
+ * @property basics
+ * @type Object
+ * @private
+ */
+basics = {};
+basics.type = [{
+		"id": "star_system",
+		"name": "Star System"
+	}, {
+		"id": "station",
+		"name": "Station"
+	}, {
+		"id": "planet",
+		"name": "Planet"
+	}, {
+		"id": "moon",
+		"name": "Moon"
+	}, {
+		"id": "city",
+		"name": "City"
+	}, {
+		"id": "marker",
+		"name": "Marker"
+	}, {
+		"id": "pilot",
+		"name": "Pilot"
+	}, {
+		"id": "character",
+		"name": "Character"
+	}, {
+		"id": "ship",
+		"name": "Ship"
+	}, {
+		"id": "room",
+		"name": "Room"
+	}, {
+		"id": "building",
+		"name": "Building"
+}];
+basics.setting = [{
+	"id": "setting:current:session",
+	"name": "Current Session"
+}];
 
 /**
  * Handles the processing of events to sync between different settings.
@@ -111,6 +163,7 @@ module.exports = function(configuration, storage, models, handlers, support) {
 							if(!nouns[load.type][supporting[x].id]) {
 								supportLoad[supporting[x].id] = true;
 								nouns[load.type][supporting[x].id] = new load.Model(supporting[x], load);
+								nouns[load.type][supporting[x].id]._class = load.type;
 								nouns[load.type][supporting[x].id]._type = load.type;
 								loaded.push(nouns[load.type][supporting[x].id]);
 							} else {
@@ -137,6 +190,7 @@ module.exports = function(configuration, storage, models, handlers, support) {
 				if(!nouns[load.type][buffer[x].id] || supportLoad[buffer[x].id]) {
 					supportLoad[buffer[x].id] = false;
 					nouns[load.type][buffer[x].id] = new load.Model(buffer[x], load);
+					nouns[load.type][buffer[x].id]._class = load.type;
 					nouns[load.type][buffer[x].id]._type = load.type;
 					loaded.push(nouns[load.type][buffer[x].id]);
 				} else {
@@ -155,9 +209,20 @@ module.exports = function(configuration, storage, models, handlers, support) {
 		});
 	});
 	loading.then(function() {
-		// Guarantee Defaults Exist
-		// Types: star_system, station, planet, moon, city, marker, pilot, character, ship, room, building
-		// setting:current:session, location:universe
+		var keys = Object.keys(basics),
+			load,
+			i,
+			j;
+
+		for(i=0; i<keys.length; i++) {
+			load = modeling[keys[i]];
+			for(j=0; j<basics[keys[i]].length; j++) {
+				if(!nouns[keys[i]][basics[keys[i]][j].id]) {
+					nouns[keys[i]][basics[keys[i]][j].id] = new load.Model(basics[keys[i]][j], load);
+					nouns[keys[i]][basics[keys[i]][j].id]._class = nouns[keys[i]][basics[keys[i]][j].id]._type = keys[i];
+				}
+			}
+		}
 	}).then(function() {
 		handlers.forEach(function(handler) {
 			handler.events.forEach(function(eventType) {
@@ -242,9 +307,6 @@ module.exports = function(configuration, storage, models, handlers, support) {
 		mark = mark || 0;
 		//console.log("Nouns: ", nouns);
 		return nouns; // TODO: Finish implementation for pruning
-		// TOFIX: T1
-		// TODO T2
-
 
 //		var state;
 		if(!player && !mark) {
