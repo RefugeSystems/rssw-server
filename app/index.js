@@ -1,3 +1,7 @@
+
+var path = require("path"),
+	fs = require("fs");
+
 /**
  *
  *
@@ -18,8 +22,6 @@ module.exports = function(configuration, models, handlers, log) {
 		URL = require("url").URL,
 		HTTPS = require("https"),
 		HTTP = require("http"),
-		path = require("path"),
-		fs = require("fs"),
 
 		options = {},
 		universe,
@@ -246,6 +248,15 @@ var configuration = require("a-configuration");
 
 configuration._await
 .then(function() {
+	var recoveryFile = __dirname + path.sep + "app" + path.sep + "configuration" + path.sep + "recover.json";
+	console.log("Recovery Path: " + recoveryFile);
+	fs.writeFile(recoveryFile, emptyRecoveryFile, function(err) {
+		if(err) {
+			console.error("Failed to clear recovery file");
+		}
+		// Ignored
+	});
+
 	var utilityHandler = require("./handlers/utility"),
 		journalHandler = require("./handlers/journals/update"),
 		itemHandler = require("./handlers/items/exchange"),
@@ -258,6 +269,24 @@ configuration._await
 
 		handlers = [],
 		models = [];
+
+	/*
+	models.push({
+		"Model": require("./models/entity.js"),
+		"type": "entity"
+	});
+	models.push({
+		"Model": require("./models/party.js"),
+		"type": "party"
+	});
+	models.push({
+		"Model": require("./models/event.js"),
+		"type": "event"
+	});
+	*/
+	utilityHandler.registerNoun("entity", models, handlers, require("./models/entity.js"));
+	utilityHandler.registerNoun("party", models, handlers, require("./models/party.js"));
+	utilityHandler.registerNoun("event", models, handlers, require("./models/event.js"));
 
 	utilityHandler.registerNoun("widgetconfiguration", models, handlers);
 	utilityHandler.registerNoun("modifierattrs", models, handlers);
@@ -303,21 +332,19 @@ configuration._await
 	handlers.push(roomHandler.take);
 
 	handlers.push(require("./handlers/entity/rolled"));
-
-	models.push({
-		"Model": require("./models/entity.js"),
-		"type": "entity"
-	});
-	models.push({
-		"Model": require("./models/party.js"),
-		"type": "party"
-	});
-	models.push({
-		"Model": require("./models/event.js"),
-		"type": "event"
+	handlers.push({
+		"process": utilityHandler.deleteProcessor,
+		"events": ["player:delete:player"]
 	});
 
 	new module.exports(configuration, models, handlers);
 }).catch(function(err) {
 	console.log("Err: ", err);
 });
+
+emptyRecoveryFile = JSON.stringify({
+	"recover": {
+		"clearing": [],
+		"master": []
+	}
+}, null, "\t");

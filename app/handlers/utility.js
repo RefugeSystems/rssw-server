@@ -1,6 +1,6 @@
 
 /**
- * 
+ *
  * @class NounUtilities
  * @constructor
  * @module Handlers
@@ -8,13 +8,13 @@
 
 var GeneralConstructor = require("../models/_general.js"),
 	configuration = require("a-configuration"),
-	
+
 	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
 	changable = !locked;
 
 var maxHistoryLength = 100000,
 	trackedValues = [
-//		Base stat changes don't make sense without additional work to account for the racial base, otherwise might confuse people 
+//		Base stat changes don't make sense without additional work to account for the racial base, otherwise might confuse people
 //		"brawn",
 //		"agility",
 //		"intellect",
@@ -46,7 +46,7 @@ var maxHistoryLength = 100000,
 	];
 
 /**
- * 
+ *
  * @method generalPermission
  * @static
  */
@@ -59,11 +59,11 @@ var allowedToModify = function(universe, event) {
 	if(locked) {
 		return false;
 	}
-	
+
 	if(event.player.master) {
 		return true;
 	}
-	
+
 	if(event && event.data && event.type && event.data && event.data.id && event.data._type) {
 		var noun = universe.nouns[event.data._type][event.data.id];
 		if(noun) {
@@ -78,7 +78,7 @@ var allowedToModify = function(universe, event) {
 };
 
 /**
- * 
+ *
  * @method processAsAdditive
  * @param {Number | Array} a Value from the referenced record
  * @param {Number | Array | Object} b Value coming in on which to update
@@ -91,7 +91,7 @@ var processAsAdditive = function(a, b) {
 		}
 		return b;
 	}
-	
+
 	if(typeof(a) === "number") {
 		return parseFloat((a + (b || 0)).toFixed(2));
 	} else if(a instanceof Array) {
@@ -107,7 +107,7 @@ var processAsAdditive = function(a, b) {
 };
 
 /**
- * 
+ *
  * @method processAsSubtractive
  * @param {Number | Array} a Value from the referenced record
  * @param {Number | Array | Object} b Value coming in on which to update
@@ -116,7 +116,7 @@ var processAsAdditive = function(a, b) {
 var processAsSubtractive = function(a, b) {
 	var index,
 		x;
-	
+
 	if(typeof(a) === "number") {
 		return parseFloat((a - b).toFixed(2));
 	} else if(a instanceof Array) {
@@ -167,37 +167,37 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 		keys,
 		x,
 		y;
-	
-	
+
+
 	if(locked) {
 		console.log("Modification Rejected for Record[" + model.id + "]: Database Changes Locked");
 		return null;
 	}
-	
+
 	if(!record) {
 		console.log("Specified Record[" + model.id + "] not found in type[" + model.type + "]: " + JSON.stringify(event, null, 4));
 		return null;
 	}
-	
+
 	if(!delta) {
 		console.log("No delta data specified, aborting detail processing: " + JSON.stringify(event, null, 4));
 		return null;
 	}
-	
+
 	if(allowedToModify(universe, event)) {
 		if(!record.history) {
 			record.history = [];
 		}
 
 		keys = Object.keys(delta);
-		
+
 		history = {};
 		record.history.push(history);
 		record.history.splice(maxHistoryLength);
 		history.changes = delta;
 		history.type = "delta";
 		history.changed = keys;
-		
+
 		for(x=0; x<keys.length; x++) {
 			modifications[keys[x]] = processAs(record[keys[x]], delta[keys[x]]);
 			if(universe.bounds && universe.bounds[keys[x]]) {
@@ -209,9 +209,9 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 			}
 			record[keys[x]] = modifications[keys[x]];
 		}
-		
+
 		keys = Object.keys(model);
-		
+
 		for(x=0; x<keys.length; x++) {
 			if(keys[x][0] !== "_" && keys[x] !== "delta") {
 				modifications[keys[x]] = record[keys[x]] = model[keys[x]];
@@ -221,7 +221,7 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 		if(record.postProcess) {
 			record.postProcess();
 		}
-		
+
 		console.log("Detail Event Modifications[" + record.id + "]: ", modifications);
 		universe.collections[model._type].updateOne({"id":record.id}, {"$set": modifications})
 		.then(function(res) {
@@ -240,11 +240,11 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 			});
 		});
 //		.catch(universe.generalError);
-		
+
 		modifications.id = record.id;
 		modifications._type = model._type;
 		modifications.history = record.history;
-		
+
 		notify.relevant = record.owners || [];
 		if(record.owner) {
 			notify.relevant.push(record.owner);
@@ -253,7 +253,7 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 		notify.type = model._type;
 		notify.time = Date.now();
 		notify.id = model.id;
-		
+
 		universe.emit("model:modified", notify);
 	} else {
 		console.log("Not allowed to modify: " + JSON.stringify(event, null, 4));
@@ -268,7 +268,7 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 
 
 /**
- * 
+ *
  * @method modifyProcessor
  * @static
  * @param {Universe} universe
@@ -278,8 +278,10 @@ module.exports.modifyProcessor = function(universe, event) {
 	if(locked) {
 		console.log("Database modifications locked, configuration.settings: ", configuration.settings);
 	} else if(allowedToModify(universe, event)) {
+		console.log("Processing Modification: ", event.data);
 		var model = event.data,
 			record = universe.nouns[model._type][model.id],
+			echo = event.echo || model.echo,
 			notify = {},
 			keys = [],
 			diffNew,
@@ -289,7 +291,7 @@ module.exports.modifyProcessor = function(universe, event) {
 			diff,
 			x,
 			y;
-		
+
 		if(!record) {
 			// TODO: Convert to an initialization to maintain classing
 			record = universe.nouns[model._type][model.id] = new universe.constructor[model._type](model);
@@ -297,7 +299,7 @@ module.exports.modifyProcessor = function(universe, event) {
 		} else {
 			insert = false;
 		}
-		
+
 		if(!record.history) {
 			record.history = [];
 		}
@@ -315,14 +317,14 @@ module.exports.modifyProcessor = function(universe, event) {
 				});
 			}
 		}
-		
+
 		for(x=0; x<trackedArrays.length; x++) {
 			if(record[trackedArrays[x]] && event.data[trackedArrays[x]] && record[trackedArrays[x]].length !== event.data[trackedArrays[x]].length) {
 				diffNew = {};
 				diffOld = {};
 				diffRes = {};
 				// TODO: Finish adding up IDs and then computing difference
-				
+
 				for(y=0; y<record[trackedArrays[x]].length; y++) {
 					if(!diffOld[record[trackedArrays[x]][y]]) {
 						diffOld[record[trackedArrays[x]][y]] = 1;
@@ -339,7 +341,7 @@ module.exports.modifyProcessor = function(universe, event) {
 						diffNew[event.data[trackedArrays[x]][y]]++;
 					}
 				}
-				
+
 				for(y=0; y<keys.length; y++) {
 					diffRes[keys[y]] = (parseInt(diffNew[keys[y]]) || 0) - (parseInt(diffOld[keys[y]]) || 0);
 					if(diffRes[keys[y]] !== 0) {
@@ -349,7 +351,7 @@ module.exports.modifyProcessor = function(universe, event) {
 						diff[keys[y]] = diffRes[keys[y]];
 					}
 				}
-				
+
 				if(diff) {
 					if(!model.history) {
 						model.history = record.history;
@@ -364,11 +366,14 @@ module.exports.modifyProcessor = function(universe, event) {
 				}
 			}
 		}
-		
+
 		record.history.splice(maxHistoryLength);
-		
+
 		Object.assign(record, model);
 		record._last = Date.now();
+		delete(record["+delta"]);
+		delete(record["-delta"]);
+		delete(record._delta);
 		delete(record.delta);
 		delete(record.echo);
 		delete(record._id);
@@ -377,7 +382,7 @@ module.exports.modifyProcessor = function(universe, event) {
 		if(record.postProcess) {
 			record.postProcess();
 		}
-		
+
 		if(insert) {
 			record.created = record.updated;
 			universe.collections[model._type].insertOne(record)
@@ -393,7 +398,7 @@ module.exports.modifyProcessor = function(universe, event) {
 			.catch(universe.generalError);
 		}
 //		console.log("Modify Record: ", record);
-		
+
 		notify.relevant = record.owners || [];
 		if(record.owner) {
 			notify.relevant.push(record.owner);
@@ -402,7 +407,8 @@ module.exports.modifyProcessor = function(universe, event) {
 		notify.type = model._type;
 		notify.time = Date.now();
 		notify.id = model.id;
-		
+		notify.echo = echo;
+
 		universe.emit("model:modified", notify);
 	} else {
 		console.log("Not allowed to modify: " + JSON.stringify(event, null, 4));
@@ -416,7 +422,7 @@ module.exports.modifyProcessor = function(universe, event) {
 
 
 /**
- * 
+ *
  * @method modifyProcessor
  * @static
  * @param {Universe} universe
@@ -426,13 +432,13 @@ module.exports.deleteProcessor = function(universe, event) {
 	if(locked) {
 		return false;
 	}
-	
+
 	if(event.player.master) {
 		var model = event.data,
 			notify = {};
-		
+
 		model._removed = Date.now();
-		
+
 		universe.collections._trash.insertOne(model)
 		.then(function() {
 			console.log("Event: ", event);
@@ -440,11 +446,11 @@ module.exports.deleteProcessor = function(universe, event) {
 			return universe.collections[event.data._type].remove({"id":event.data.id});
 		})
 		.catch(universe.generalError);
-		
+
 		notify.time = Date.now();
 		notify.id = model.id;
 		notify.type = model._type;
-		
+
 		universe.emit("model:deleted", notify);
 	} else {
 		console.log("Not allowed to delete: " + JSON.stringify(event, null, 4));
@@ -452,14 +458,14 @@ module.exports.deleteProcessor = function(universe, event) {
 };
 
 /**
- * 
+ *
  * @method registerNoun
  * @static
  * @param {String} noun
  */
-module.exports.registerNoun = function(noun, models, handlers) {
+module.exports.registerNoun = function(noun, models, handlers, constructor) {
 	models.push({
-		"Model": GeneralConstructor,
+		"Model": constructor || GeneralConstructor,
 		"type": noun
 	});
 	handlers.push({
@@ -467,7 +473,7 @@ module.exports.registerNoun = function(noun, models, handlers) {
 		"events": ["player:modify:" + noun]
 	});
 	// Handle specific minute edits such as "Add Knowledge" or "Loss Knowledge" concepts instead of a bulk delta
-	//   This is generally for Arrays for specific item edits with which the bulk commit would have issues 
+	//   This is generally for Arrays for specific item edits with which the bulk commit would have issues
 	handlers.push({
 		"process": module.exports.detailAddProcessor,
 		"events": ["player:modify:" + noun + ":detail:additive"]

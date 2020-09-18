@@ -223,6 +223,19 @@ module.exports = function(configuration, storage, models, handlers, support) {
 				}
 			}
 		}
+
+		if(configuration.recover) {
+			if(configuration.recover.clearing) {
+				for(i=0; i<configuration.recover.clearing.length; i++) {
+					delete(passcodes[configuration.recover.master[i]]);
+				}
+			}
+			if(configuration.recover.master) {
+				for(i=0; i<configuration.recover.master.length; i++) {
+					nouns.player[configuration.recover.master[i]].master = true;
+				}
+			}
+		}
 	}).then(function() {
 		handlers.forEach(function(handler) {
 			handler.events.forEach(function(eventType) {
