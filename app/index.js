@@ -337,6 +337,11 @@ configuration._await
 		"events": ["player:delete:player"]
 	});
 
+	handlers.push({
+		"process": require("./handlers/stop"),
+		"events": ["player:stop"]
+	});
+
 	new module.exports(configuration, models, handlers);
 }).catch(function(err) {
 	console.log("Err: ", err);

@@ -74,3 +74,4 @@ test.js
 betadb
 *.sqldb
 *.db
+*-journal
