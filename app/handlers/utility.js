@@ -159,7 +159,7 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 	// TODO: Individual Piece-Meal acquisitions
 	console.log("Detail Event: ", event);
 	var model = event.data,
-		delta = model.delta || model._delta,
+		delta = model.delta || model._delta || model["+delta"] || model["-delta"],
 		record = universe.nouns[model._type][model.id],
 		modifications = {},
 		notify = {},
@@ -250,6 +250,10 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 			notify.relevant.push(record.owner);
 		}
 		notify.modification = modifications;
+		delete(modifications["+delta"]);
+		delete(modifications["-delta"]);
+		delete(modifications._delta);
+		delete(modifications.delta);
 		notify.type = model._type;
 		notify.time = Date.now();
 		notify.id = model.id;
