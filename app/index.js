@@ -332,6 +332,7 @@ configuration._await
 	handlers.push(roomHandler.take);
 
 	handlers.push(require("./handlers/entity/rolled"));
+	handlers.push(require("./handlers/shopping/checkout"));
 	handlers.push({
 		"process": utilityHandler.deleteProcessor,
 		"events": ["player:delete:player"]

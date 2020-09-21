@@ -1,6 +1,6 @@
 
 /**
- * 
+ *
  * @class Player
  * @extends EventEmitter
  * @constructor
@@ -15,7 +15,7 @@ var EventEmitter = require("events").EventEmitter,
 		"linked_discord",
 		"linked_reddit",
 		"linked_imgur",
-		
+
 		"username",
 		"master",
 		"entity",
@@ -28,7 +28,7 @@ module.exports = function(universe, details) {
 	this.connections = 0;
 	this.leaves = 0;
 	this.last = 0;
-	
+
 	var connections = [],
 		openSockets = {},
 		standardEvents,
@@ -37,26 +37,26 @@ module.exports = function(universe, details) {
 		globalEvents,
 		listeners,
 		x;
-	
+
 	for(x=0; x<keys.length; x++) {
 		this[keys[x]] = details[keys[x]];
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @method connect
 	 * @param {WebSocket} socket
 	 */
 	this.connect = function(socket) {
 		var state;
-		
+
 		player.last = Date.now();
 		connections.push(socket);
 		player.connections++;
 
 		socket.connect_id = Random.identifier("connection");
 		openSockets[socket.connect_id] = socket;
-		
+
 		socket.onmessage = function(event) {
 			var message = JSON.parse(event.data);
 			message = {
@@ -72,7 +72,7 @@ module.exports = function(universe, details) {
 				console.log("Player Message [" + (message.received - message.sent) + "ms]: " + player.username + "\n", message);
 			}
 			message.player = player;
-			
+
 			setTimeout(function() {
 				player.last = Date.now();
 				try {
@@ -92,28 +92,28 @@ module.exports = function(universe, details) {
 				}
 			});
 		};
-		
+
 		socket.onclose = function(event) {
 			delete(openSockets[socket.connect_id]);
 			connections.purge(socket);
 			player.connections--;
 			player.leaves++;
-			
+
 			var event = {};
 			event.message = event.message;
 			event.received = Date.now();
 			event.signal = "close";
 			event.player = player;
 			event.event = event;
-			
+
 			setTimeout(function() {
 				universe.emit("disconnected", event);
 			});
 		};
-		
+
 		socket.onerror = function(error) {
 			sockets.purge(socket);
-			
+
 			var event = {};
 			event.message = error.message;
 			event.received = Date.now();
@@ -123,7 +123,7 @@ module.exports = function(universe, details) {
 				universe.emit("error", event);
 			});
 		};
-		
+
 		state = {
 			"event": universe.currentState(player),
 			"type": "world:state",
@@ -131,7 +131,7 @@ module.exports = function(universe, details) {
 			"version": universe.version,
 			"master": player.master
 		};
-		
+
 		universe.emit("player:connected", player);
 		socket.send(JSON.stringify(state));
 
@@ -147,9 +147,9 @@ module.exports = function(universe, details) {
 		console.log("Connection: ", state);
 		universe.emit("model:modified", state);
 	};
-	
+
 	/**
-	 * 
+	 *
 	 * @method send
 	 * @param {Object} event
 	 * @param {Object} [socket] Send only to a specific socket.
@@ -166,7 +166,7 @@ module.exports = function(universe, details) {
 			}
 		}
 	};
-	
+
 	this.event_response = {};
 	this.event_response["player:ping"] = function(message, socket) {
 		send({
@@ -175,26 +175,28 @@ module.exports = function(universe, details) {
 			"echo": message.data.echo
 		}, socket);
 	};
-	
+
 	standardEvents = [
 		"model:modified",
 		"player:whisper",
-		"entity:rolled",
 		"model:deleted",
+		"echo:response",
+		"echoing",
 		"control",
 	];
-	
+
 	masterEvents = [
 		"universe:console",
+		"entity:rolled",
 		"master:speak"
 	];
-	
+
 	globalEvents = [
 		"universe:modified",
 		"universe:error",
 		"error"
 	];
-	
+
 	listeners = {
 		// Special Logic conditions
 		"player:connected": function (connecting) {
@@ -209,7 +211,7 @@ module.exports = function(universe, details) {
 			}
 		}
 	};
-	
+
 	standardEvents.forEach(function(eventType) {
 		listeners[eventType] = function(event) {
 			if(player.master || !event.relevent || event.relevent.indexOf(player.id) !== -1) {
@@ -225,7 +227,7 @@ module.exports = function(universe, details) {
 			}
 		};
 	});
-	
+
 	masterEvents.forEach(function(eventType) {
 		listeners[eventType] = function(event) {
 			if(player.master) {
@@ -241,7 +243,7 @@ module.exports = function(universe, details) {
 			}
 		};
 	});
-	
+
 	globalEvents.forEach(function(eventType) {
 		listeners[eventType] = function(event) {
 			send({
