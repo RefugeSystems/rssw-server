@@ -6,6 +6,7 @@ var Storage = require("./index"),
 	emptyArray = [],
 	defaultMaster = {
 		"$id": "master",
+		"$time": Date.now(),
 		"$serialization": JSON.stringify({
 			"id": "master",
 			"username": "master",
@@ -40,10 +41,10 @@ class StorageSQLite extends Storage {
 			if(err && err.message.indexOf("no such table") !== -1) {
 				this.log.debug("Initializing Tables");
 				this.connection
-				.run("create table datapoint (id text, _serialization text, name text, label text);", emptyArray, this.receiveError)
-				.run("create table datamap (noun text, field text);", emptyArray, this.receiveError)
-				.run("create table player (id text, _serialization text, username text, name text, passcode text, email text, entity text, master boolean, description text, master_note text);", emptyArray, (tableError) => {
-					this.connection.run("insert into player(\"id\", \"_serialization\") values( $id , $serialization )", defaultMaster, (playerError) => {
+				.run("create table datapoint (id text, _serialization text, name text, label text, created bigint, updated bigint);", emptyArray, this.receiveError)
+				.run("create table datamap (noun text, field text, created bigint, updated bigint);", emptyArray, this.receiveError)
+				.run("create table player (id text, _serialization text, username text, name text, passcode text, email text, entity text, master boolean, description text, master_note text, created bigint, updated bigint);", emptyArray, (tableError) => {
+					this.connection.run("insert into player(\"id\", \"_serialization\", \"updated\", \"created\") values( $id , $serialization, $time, $time)", defaultMaster, (playerError) => {
 						if(tableError || playerError) {
 							this.receiveError(playerError);
 							this.receiveError(tableError);
@@ -80,7 +81,8 @@ class StorageSQLite extends Storage {
 var parameterize = function(record) {
 	return {
 		"$id": record.id,
-		"$serialization": JSON.stringify(record)
+		"$serialization": JSON.stringify(record),
+		"$time": Date.now()
 	};
 };
 
@@ -97,7 +99,7 @@ class StorageCollectionSQLite extends Storage.Collection {
 				if(err && err.message.indexOf("no such table") !== -1) {
 					this.log.debug("Initializing Collection: " + this.name);
 					this.connection
-					.run("create table " + this.name + " (id text, _serialization text, name text, description text, master_note text);", emptyArray, (err) => {
+					.run("create table " + this.name + " (id text, _serialization text, name text, description text, master_note text, updated bigint, created bigint);", emptyArray, (err) => {
 						if(err) {
 							this.log.error("Collection Failed to Initialize: " + this.name, err);
 						} else {
@@ -125,7 +127,7 @@ class StorageCollectionSQLite extends Storage.Collection {
 					now,
 					x;
 
-				this.connection.all("select * from " + this.name + ";", emptyArray, (err, rows) => {
+				this.connection.all("select * from " + this.name + " order by updated desc;", emptyArray, (err, rows) => {
 					if(err) {
 						fail(err);
 					} else {
@@ -135,9 +137,13 @@ class StorageCollectionSQLite extends Storage.Collection {
 							try {
 								loading = JSON.parse(rows[x]._serialization);
 								if(loading && loading.id) {
-									this._tracked[loading.id] = now;
-									loading.loaded = now;
-									result.push(loading);
+									if(this._tracked[loading.id]) {
+										console.warn("Duplicate ID[" + this.name + "]: " + loading.id);
+									} else {
+										this._tracked[loading.id] = now;
+										loading.loaded = now;
+										result.push(loading);
+									}
 								}
 							} catch(e) {
 								this.log.error("Failed to load row for collection[" + name + "]: " + JSON.stringify(rows[x]) + exceptionToString(e));
@@ -156,6 +162,20 @@ class StorageCollectionSQLite extends Storage.Collection {
 		});
 	}
 
+	selectAll(query) {
+		console.log("+----\n| Select\n+----");
+		return new Promise((done, fail) => {
+			this.connection.all("select * from " + this.name + " order by updated desc;", emptyArray, (err, rows) => {
+				if(err) {
+					fail(err);
+				} else {
+					// console.log(rows);
+					done(rows);
+				}
+			});
+		});
+	}
+
 	insertOne(noun) {
 		if(this._tracked[noun.id]) {
 			return this.update(noun);
@@ -167,7 +187,7 @@ class StorageCollectionSQLite extends Storage.Collection {
 	insert(noun) {
 		return new Promise((done, fail) => {
 			var process = () => {
-				this.connection.run("insert into " + this.name + "(\"id\", \"_serialization\") values( $id , $serialization );", parameterize(noun), (err) => {
+				this.connection.run("insert into " + this.name + "(\"id\", \"_serialization\", \"updated\", \"created\") values( $id , $serialization, $time, $time );", parameterize(noun), (err) => {
 					if(err) {
 						fail(err);
 					} else {
@@ -208,7 +228,7 @@ class StorageCollectionSQLite extends Storage.Collection {
 					parameters["$id"] = query.id;
 				}
 
-				this.connection.run("update " + this.name + " set _serialization = $serialization where id = $id ;", parameters, (err) => {
+				this.connection.run("update " + this.name + " set _serialization = $serialization, updated = $time where id = $id ;", parameters, (err) => {
 					if(err) {
 						fail(err);
 					} else {

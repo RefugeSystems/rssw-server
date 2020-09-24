@@ -21,7 +21,8 @@ module.exports.process = function(universe, event) {
 		item,
 		x;
 
-	if(customer && shop && (customer.owner === event.player.id || (customer.owners && customer.owners.indexOf(event.player.id) !== -1))) {
+	console.log("Checkout: ", event);
+	if(event.player.master || (customer && shop && (customer.owner === event.player.id || (customer.owners && customer.owners.indexOf(event.player.id) !== -1)))) {
 		if(customer.location === shop.location) {
 			for(x=0; x<event.data.checkout.length; x++) {
 				item = universe.nouns.item[event.data.checkout[x]];

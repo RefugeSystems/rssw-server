@@ -156,6 +156,10 @@ class StorageCollection {
 		};
 	}
 
+	getTracked() {
+		return Object.keys(this._tracked);
+	}
+
 	/**
 	 *
 	 * @method getAll

@@ -1,12 +1,12 @@
 class General {
 	constructor(details, loading) {
-		this._class = "general";
-		Object.assign(this, details);
-		if(loading) {
-			this._type = loading.type;
-		} else {
-			this._type = this.constructor.name.toLowerCase();
+		if(!loading) {
+			loading = {};
 		}
+
+		Object.assign(this, details);
+		this._class = loading.type || details._type || this.constructor.name.toLowerCase();
+		this._type = this._class;
 		if(!this.history) {
 			this.history = [];
 		}

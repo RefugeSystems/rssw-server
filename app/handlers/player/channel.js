@@ -81,7 +81,7 @@ module.exports = function(universe, details) {
 					} else {
 						universe.emit(message.eventType, message);
 					}
-//					console.log("Player Message Emitted");
+					// console.log("Player Message Emitted");
 				} catch(violation) {
 					var event = {
 						"received": Date.now(),

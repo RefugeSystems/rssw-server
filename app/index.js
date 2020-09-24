@@ -46,6 +46,7 @@ module.exports = function(configuration, models, handlers, log) {
 	}
 
 	universe = new Universe(configuration, storage, models, handlers, support);
+	console.log("Universe Made");
 	universe.on("error", function(event) {
 		var data = {};
 		data.type = "error";
@@ -77,6 +78,7 @@ module.exports = function(configuration, models, handlers, log) {
 		data.event = event;
 		log.warn(data);
 	});
+	console.log("Listening to Universe");
 
 	if(configuration.server.key) {
 		options.ca = fs.readFileSync(configuration.server.interm || configuration.server.certificate_authority || configuration.server.certificateAuthority || configuration.server.ca, "utf-8");
@@ -333,6 +335,7 @@ configuration._await
 
 	handlers.push(require("./handlers/entity/rolled"));
 	handlers.push(require("./handlers/shopping/checkout"));
+	handlers.push(require("./handlers/system/api"));
 	handlers.push({
 		"process": utilityHandler.deleteProcessor,
 		"events": ["player:delete:player"]
@@ -344,6 +347,7 @@ configuration._await
 	});
 
 	new module.exports(configuration, models, handlers);
+	console.log("Bound");
 }).catch(function(err) {
 	console.log("Err: ", err);
 });
