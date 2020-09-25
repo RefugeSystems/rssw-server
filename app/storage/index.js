@@ -140,7 +140,8 @@ class Storage extends EventEmitter {
  * @constructor
  */
 class StorageCollection {
-	constructor() {
+	constructor(storage, name) {
+		this.storage = storage;
 		this.ready = false;
 		this._waiting = [];
 		this._tracked = {};

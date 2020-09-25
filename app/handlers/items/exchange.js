@@ -1,12 +1,17 @@
 
+var configuration = require("a-configuration"),
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked;
+
 var allowedToModify = function(universe, event) {
+	if(locked) {
+		return false;
+	}
+	
 	if(event.player.master) {
 		return true;
 	}
 	
-	
-
-
 	return false;
 };
 
@@ -160,6 +165,10 @@ var giveItem = function(parameters) {
 module.exports.give = {
 	"events": ["player:give:item"],
 	"process": function(universe, event) {
+		if(locked) {
+			return false;
+		}
+		
 //		var source = universe.nouns.inventory[event.data.inventory] || universe.nouns.entity[event.data.source],
 		var source = universe.nouns.entity[event.data.source],
 			item = universe.nouns.item[event.data.item],
@@ -287,6 +296,10 @@ module.exports.give = {
 module.exports.take = {
 	"events": ["player:take:item"],
 	"process": function(universe, event) {
+		if(locked) {
+			return false;
+		}
+		
 		var item = universe.nouns.item[event.data.item],
 			index = -2,
 			notify,

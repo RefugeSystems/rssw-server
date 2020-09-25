@@ -8,7 +8,6 @@
 
 var GeneralConstructor = require("../models/_general.js"),
 	configuration = require("a-configuration"),
-
 	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
 	changable = !locked;
 

@@ -8,9 +8,17 @@
  * @param {String} echo
  */
 
+var configuration = require("a-configuration"),
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked;
+
 module.exports = {};
 module.exports.events = ["player:shop:checkout"];
 module.exports.process = function(universe, event) {
+	if(locked) {
+		return false;
+	}
+	
 	// TODO: Implement Server-Side object inheritance and tracking for proper cost analysis
 
 	var customer = universe.nouns.entity[event.data.customer],

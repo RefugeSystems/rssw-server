@@ -163,7 +163,6 @@ class StorageCollectionSQLite extends Storage.Collection {
 	}
 
 	selectAll(query) {
-		console.log("+----\n| Select\n+----");
 		return new Promise((done, fail) => {
 			this.connection.all("select * from " + this.name + " order by updated desc;", emptyArray, (err, rows) => {
 				if(err) {

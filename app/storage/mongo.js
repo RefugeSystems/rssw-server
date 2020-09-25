@@ -8,6 +8,7 @@
  * @param {Object} configuration
  */
 module.exports = function(settings, configuration) {
+	settings = settings || {};
 
 	var connection = configuration.mongo.connectDB(configuration.core.database);
 
