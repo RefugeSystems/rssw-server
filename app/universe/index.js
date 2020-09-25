@@ -3,7 +3,14 @@ var EventEmitter = require("events").EventEmitter,
 	Random = require("rs-random"),
 	util = require("util"),
 	closeSocket,
-	basics;
+	basics,
+	
+	defaultMaster = {
+		"id": "master",
+		"username": "master",
+		"master": true,
+		"description": "Default master account"
+	};
 
 closeSocket = function(connection, conf) {
 	connection.close(conf.code, conf.reason);
@@ -128,22 +135,28 @@ module.exports = function(configuration, storage, models, handlers, support) {
 	loading = collections.player.getAll();
 	loading = loading.then(function(buffer) {
 		nouns.player = {};
-		for(x=0; x<buffer.length; x++) {
-			if(!players[buffer[x].id]) {
-				players[buffer[x].id] = new Player(universe, buffer[x]);
-				nouns.player[buffer[x].id] = players[buffer[x].id];
-				if(buffer[x].passcode) {
-					passcodes[buffer[x].id] = buffer[x].passcode;
-					delete(buffer[x].passcode);
+		if(buffer && buffer.length) {
+			for(x=0; x<buffer.length; x++) {
+				if(!players[buffer[x].id]) {
+					players[buffer[x].id] = new Player(universe, buffer[x]);
+					nouns.player[buffer[x].id] = players[buffer[x].id];
+					if(buffer[x].passcode) {
+						passcodes[buffer[x].id] = buffer[x].passcode;
+						delete(buffer[x].passcode);
+					}
+				} else {
+					universe.emit("warning", {
+						"message": "Duplicate Object",
+						"time": Date.now(),
+						"type": "player",
+						"data": buffer[x]
+					});
 				}
-			} else {
-				universe.emit("warning", {
-					"message": "Duplicate Object",
-					"time": Date.now(),
-					"type": "player",
-					"data": buffer[x]
-				});
 			}
+		} else {
+			collections.player.insertOne(defaultMaster);
+			players[defaultMaster.id] = new Player(universe, defaultMaster);
+			nouns.player[defaultMaster.id] = players[defaultMaster.id];
 		}
 		return collections[models[0].type].getAll();
 	});
