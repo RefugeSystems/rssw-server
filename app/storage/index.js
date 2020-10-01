@@ -143,6 +143,7 @@ class StorageCollection {
 	constructor(storage, name) {
 		this.storage = storage;
 		this.ready = false;
+		this._references = {};
 		this._waiting = [];
 		this._tracked = {};
 		this._errors = {};

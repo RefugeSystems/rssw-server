@@ -140,13 +140,15 @@ class StorageCollectionSQLite extends Storage.Collection {
 									if(this._tracked[loading.id]) {
 										console.warn("Duplicate ID[" + this.name + "]: " + loading.id);
 									} else {
+										this._references[loading.id] = loading;
 										this._tracked[loading.id] = now;
 										loading.loaded = now;
 										result.push(loading);
 									}
 								}
 							} catch(e) {
-								this.log.error("Failed to load row for collection[" + name + "]: " + JSON.stringify(rows[x]) + exceptionToString(e));
+								this.log.error("Failed to load row for collection[" + this.name + "]: " + JSON.stringify(rows[x]) + e.message);
+								// console.log("Error: ", e);
 							}
 						}
 						done(result);
@@ -191,6 +193,7 @@ class StorageCollectionSQLite extends Storage.Collection {
 						fail(err);
 					} else {
 						this._tracked[noun.id] = Date.now();
+						this._references[noun.id] = noun;
 						done(noun);
 					}
 				});
@@ -216,7 +219,7 @@ class StorageCollectionSQLite extends Storage.Collection {
 
 		if(noun.$set) {
 			// TODO: Once field expansion is present, expand this to handle piecemeal field updates to the SQL columns correctly
-			noun = noun.$set;
+			noun = Object.assign({}, this._references[query.id], noun.$set);
 		}
 
 		return new Promise((done, fail) => {
@@ -232,6 +235,7 @@ class StorageCollectionSQLite extends Storage.Collection {
 						fail(err);
 					} else {
 						this._tracked[noun.id] = Date.now();
+						this._references[noun.id] = noun;
 						done(noun);
 					}
 				});
