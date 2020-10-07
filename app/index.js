@@ -312,6 +312,7 @@ configuration._await
 	utilityHandler.registerNoun("dataset", models, handlers);
 //	utilityHandler.registerNoun("loadout", models, handlers);
 //	utilityHandler.registerNoun("history", models, handlers);
+	utilityHandler.registerNoun("action", models, handlers);
 	utilityHandler.registerNoun("effect", models, handlers);
 //	utilityHandler.registerNoun("planet", models, handlers);
 	utilityHandler.registerNoun("widget", models, handlers);
