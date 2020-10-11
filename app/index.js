@@ -337,6 +337,9 @@ configuration._await
 	handlers.push(require("./handlers/entity/rolled"));
 	handlers.push(require("./handlers/shopping/checkout"));
 	handlers.push(require("./handlers/system/api"));
+	handlers.push(require("./handlers/items/recharge"));
+	handlers.push(require("./handlers/items/debug"));
+	handlers.push(require("./handlers/items/draw"));
 	handlers.push({
 		"process": utilityHandler.deleteProcessor,
 		"events": ["player:delete:player"]

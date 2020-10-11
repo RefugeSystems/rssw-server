@@ -19,6 +19,26 @@ class General {
 		this.history.unshift(event);
 		this.history.splice(this.maxHistoryLength || 20);
 	}
+
+	setData(universe, data, echo) {
+		var notify = {};
+
+		Object.assign(this, data);
+		console.log("Updated: ", this);
+		universe.collections[this._class || this._type].updateOne({"id":this.id}, {"$set":data})
+		.catch(universe.generalError);
+
+		notify.relevant = this.owners || [];
+		notify.modification = data;
+		notify.type = this._class || this._type;
+		notify.time = Date.now();
+		notify.id = this.id;
+		notify.echo = echo;
+
+		universe.emit("model:modified", notify);
+	}
+
+	has
 }
 
 module.exports = General;

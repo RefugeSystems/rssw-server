@@ -4,7 +4,7 @@ var EventEmitter = require("events").EventEmitter,
 	util = require("util"),
 	closeSocket,
 	basics,
-	
+
 	defaultMaster = {
 		"id": "master",
 		"username": "master",
@@ -77,6 +77,7 @@ basics.setting = [{
  * @param {Array} handlers
  */
 module.exports = function(configuration, storage, models, handlers, support) {
+	this.locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
 	this.version = configuration.package.version;
 	this.bounds = configuration.bounds;
 	this.setMaxListeners(200);

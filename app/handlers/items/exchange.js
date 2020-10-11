@@ -171,7 +171,7 @@ module.exports.give = {
 		}
 
 //		var source = universe.nouns.inventory[event.data.inventory] || universe.nouns.entity[event.data.source],
-		var source = universe.nouns.entity[event.data.source],
+		var source = universe.nouns.entity[event.data.source] || universe.nouns.item[event.data.source],
 			item = universe.nouns.item[event.data.item],
 			parameters = {},
 			receiving,
