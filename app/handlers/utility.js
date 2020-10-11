@@ -120,10 +120,22 @@ var processAsSubtractive = function(a, b) {
 		return parseFloat((a - b).toFixed(2));
 	} else if(a instanceof Array) {
 		if(b instanceof Array) {
-			for(x=0; x<b.length; x++) {
-				index = a.indexOf(b[x]);
-				if(index !== -1) {
-					a.splice(index, 1);
+			if(b.length && typeof(b[0]) === "object") {
+				index = {};
+				for(x=0; x<b.length; x++) {
+					index[b[x].id] = true;
+				}
+				for(x=a.length-1; 0<=x; x--) {
+					if(a[x] && (index[a[x]] || index[a[x].id])) {
+						a.splice(x, 1);
+					}
+				}
+			} else {
+				for(x=0; x<b.length; x++) {
+					index = a.indexOf(b[x]);
+					if(index !== -1) {
+						a.splice(index, 1);
+					}
 				}
 			}
 		} else {
