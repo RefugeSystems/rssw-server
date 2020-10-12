@@ -43,13 +43,10 @@ if(!Array.prototype.purge) {
  */
 if(!Array.prototype.contains) {
 	Array.prototype.contains = function(entry) {
-		if(typeof(entry) === "object") {
-			for(var x=0; x<this.length; x++) {
-				if(this[x] && (this[x] === entry.id || this[x].id === entry.id || this[x] === entry || this[x].id === entry)) {
-					return true;
-				}
+		for(var x=0; x<this.length; x++) {
+			if(this[x] && (this[x] === entry.id || this[x].id === entry.id || this[x] === entry || this[x].id === entry)) {
+				return true;
 			}
-			return false;
 		}
 
 		return this.indexOf(entry) !== -1;
