@@ -99,6 +99,19 @@ class StorageCollectionMongoDB extends Storage.Collection {
 		});
 	};
 
+	selectAll() {
+		return new Promise((done, fail) => {
+			this.collection.find({}).then(function(res) {
+				if(err) {
+					fail(err);
+				} else {
+					// console.log(rows);
+					done(res);
+				}
+			});
+		});
+	}
+
 	insertOne(data) {
 		return new Promise((done, fail) => {
 			var process = function() {

@@ -45,6 +45,18 @@ module.exports = function(settings, configuration) {
 			});
 		};
 
+		this.selectAll = function() {
+			return new Promise((done, fail) => {
+				collection.find().toArray()
+				.then(function(res) {
+					done(res);
+				})
+				.catch(function(err) {
+					fail(err);
+				});
+			});
+		}
+
 		this.insertOne = function(data) {
 			return collection.insertOne(data);
 		};

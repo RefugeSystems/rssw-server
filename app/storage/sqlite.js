@@ -164,7 +164,7 @@ class StorageCollectionSQLite extends Storage.Collection {
 		});
 	}
 
-	selectAll(query) {
+	selectAll() {
 		return new Promise((done, fail) => {
 			this.connection.all("select * from " + this.name + " order by updated desc;", emptyArray, (err, rows) => {
 				if(err) {
