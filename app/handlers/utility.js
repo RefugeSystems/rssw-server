@@ -168,7 +168,7 @@ module.exports.detailSubProcessor = function(universe, event) {
 
 module.exports.detailProcessor = function(universe, event, processAs) {
 	// TODO: Individual Piece-Meal acquisitions
-	console.log("Detail Event: ", event);
+	// console.log("Detail Event: ", event);
 	var model = event.data,
 		delta = model.delta || model._delta || model["+delta"] || model["-delta"],
 		record = universe.nouns[model._type][model.id],
@@ -233,7 +233,7 @@ module.exports.detailProcessor = function(universe, event, processAs) {
 			record.postProcess();
 		}
 
-		console.log("Detail Event Modifications[" + record.id + "]: ", modifications);
+		// console.log("Detail Event Modifications[" + record.id + "]: ", modifications);
 		universe.collections[model._type].updateOne({"id":record.id}, {"$set": modifications})
 		.then(function(res) {
 			// Happens when setting to the same as the current value
@@ -293,7 +293,7 @@ module.exports.modifyProcessor = function(universe, event) {
 	if(locked) {
 		console.log("Database modifications locked, configuration.settings: ", configuration.settings);
 	} else if(allowedToModify(universe, event)) {
-		console.log("Processing Modification: ", event.data);
+		// console.log("Processing Modification: ", event.data);
 		var model = event.data,
 			record = universe.nouns[model._type][model.id],
 			echo = event.echo || model.echo,
@@ -456,7 +456,7 @@ module.exports.deleteProcessor = function(universe, event) {
 
 		universe.collections._trash.insertOne(model)
 		.then(function() {
-			console.log("Event: ", event);
+			// console.log("Event: ", event);
 			delete(universe.nouns[event.data._class || event.data._type][event.data.id]);
 			return universe.collections[event.data._type].remove({"id":event.data.id});
 		})
