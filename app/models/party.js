@@ -3,13 +3,8 @@ var General = require("./_general.js");
 class Party extends General {
 	constructor(details, loading) {
 		super(details, loading);
-		this._class = "party";
+		this._type = this._class = "party";
 		Object.assign(this, details);
-		if(loading) {
-			this._type = loading.type;
-		} else {
-			console.warn("No Loading Specified");
-		}
 		if(!this.history) {
 			this.history = [];
 		}

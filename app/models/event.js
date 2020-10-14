@@ -3,13 +3,8 @@ var General = require("./_general.js");
 class Event extends General {
 	constructor(details, loading) {
 		super(details, loading);
-		this._class = "event";
+		this._type = this._class = "event";
 		Object.assign(this, details);
-		if(loading) {
-			this._type = loading.type;
-		} else {
-			console.warn("No Loading Specified");
-		}
 		if(!this.history) {
 			this.history = [];
 		}
