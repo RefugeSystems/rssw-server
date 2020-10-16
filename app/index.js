@@ -150,7 +150,7 @@ module.exports = function(configuration, models, handlers, log) {
 			}
 
 			// TODO: Fold into standard logging at debug level
-			console.log("GET[" + request.url + "]: " + pathing);
+			// console.log("GET[" + request.url + "]: " + pathing);
 			if(pathing.startsWith(configuration.server.web_root)) {
 				fs.readFile(pathing, function(err, data) {
 					if(err) {

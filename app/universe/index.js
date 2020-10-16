@@ -62,6 +62,10 @@ basics.type = [{
 		"id": "building",
 		"name": "Building"
 }];
+basics.knowledge = [{
+	"id": "knowledge:token:destiny",
+	"name": "Destiny Points"
+}];
 basics.setting = [{
 	"id": "setting:current:session",
 	"name": "Current Session"
