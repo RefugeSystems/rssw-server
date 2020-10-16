@@ -31,6 +31,7 @@ module.exports = {
 			}
 		}
 
+		// TODO: Check event player owns source
 		console.log("?draw: " + origin.item.contains(source.id) + " |[" + (!!cards) + "]: " + (cards?cards.length:-1));
 		if(origin.item && origin.item.contains(source.id) && cards && cards.length) {
 			console.log("!draw");

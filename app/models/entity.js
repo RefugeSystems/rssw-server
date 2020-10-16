@@ -46,6 +46,14 @@ class Entity extends General {
 			this.ability = [];
 		}
 	}
+
+	ownsItem(universe, id) {
+		// TODO: Check item lisit and handle checking contained items
+	}
+
+	hasItem(universe, id) {
+		// TODO: Check item lisit and handle checking contained items
+	}
 }
 
 module.exports = Entity;

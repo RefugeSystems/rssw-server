@@ -11,12 +11,15 @@ class Event extends General {
 		if(!this.entity) {
 			this.entity = [];
 		}
+		if(!this.state) {
+			this.state = {};
+		}
 	}
-	
+
 	postProcess() {
 		var buffer,
 			x;
-		
+
 		if(this.involved && this.involved.length) {
 			buffer = {};
 			for(x=0; x<this.involved.length; x++) {

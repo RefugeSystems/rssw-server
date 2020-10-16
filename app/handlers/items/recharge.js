@@ -6,6 +6,7 @@ module.exports = {
 			return false;
 		}
 
+		// TODO: Check event player owns source & target
 		var origin = universe.nouns.entity[event.data.origin] || universe.nouns.item[event.data.origin],
 			source = universe.nouns.item[event.data.source],
 			target = universe.nouns.item[event.data.target],
