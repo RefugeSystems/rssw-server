@@ -342,6 +342,7 @@ configuration._await
 	handlers.push(require("./handlers/items/draw"));
 	handlers.push(require("./handlers/session/destiny_light"));
 	handlers.push(require("./handlers/session/destiny_dark"));
+	handlers.push(require("./handlers/data"));
 	handlers.push({
 		"process": utilityHandler.deleteProcessor,
 		"events": ["player:delete:player"]

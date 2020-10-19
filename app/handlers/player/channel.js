@@ -88,7 +88,7 @@ module.exports = function(universe, details) {
 						"error": violation,
 						"cause": message
 					};
-					this.emit("error", event);
+					player.emit("error", event);
 				}
 			});
 		};
@@ -181,6 +181,7 @@ module.exports = function(universe, details) {
 		"player:whisper",
 		"model:deleted",
 		"echo:response",
+		"data:receive",
 		"echoing",
 		"control",
 	];
@@ -215,6 +216,14 @@ module.exports = function(universe, details) {
 	standardEvents.forEach(function(eventType) {
 		listeners[eventType] = function(event) {
 			if(player.master || !event.relevent || event.relevent.indexOf(player.id) !== -1) {
+				event = Object.assign(event);
+				if(!player.master && event.data) {
+					delete(event.data.master_note);
+				}
+				if(!player.master && event.modification) {
+					delete(event.modification.master_note);
+				}
+				
 				send({
 					"classification": "standard",
 					"emitted": event.emitted,

@@ -336,8 +336,32 @@ module.exports = function(configuration, storage, models, handlers, support) {
 	 */
 	this.currentState = function(player, mark) {
 		mark = mark || 0;
-		//console.log("Nouns: ", nouns);
-		return nouns; // TODO: Finish implementation for pruning
+		console.log("Player Current State: ", player);
+		
+		var state = {},
+			noun,
+			keys,
+			ids,
+			i,
+			j;
+		
+		keys = Object.keys(nouns);
+		for(i=0; i<keys.length; i++) {
+			ids = Object.keys(nouns[keys[i]]);
+			state[keys[i]] = {};
+			for(j=0; j<ids.length; j++) {
+				state[keys[i]][ids[j]] = Object.assign({}, nouns[keys[i]][ids[j]]);
+				if(!player.master) {
+					delete(state[keys[i]][ids[j]].master_note);
+					if(state[keys[i]][ids[j]].data && state[keys[i]][ids[j]].delay_data) {
+						state[keys[i]][ids[j]].delayed_data = true;
+						delete(state[keys[i]][ids[j]].data);
+					}
+				}
+			}
+		}
+		
+		return state; // TODO: Finish implementation for pruning
 
 //		var state;
 		if(!player && !mark) {
