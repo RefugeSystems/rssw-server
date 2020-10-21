@@ -1,6 +1,6 @@
 {
 	"name": "rs-gamecore",
-	"version": "0.28.01",
+	"version": "0.28.02",
 	"description": "",
 	"main": "index.js",
 	"scripts": {
