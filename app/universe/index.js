@@ -236,6 +236,7 @@ module.exports = function(configuration, storage, models, handlers, support) {
 			load = modeling[keys[i]];
 			for(j=0; j<basics[keys[i]].length; j++) {
 				if(!nouns[keys[i]][basics[keys[i]][j].id]) {
+					collections[keys[i]].insertOne(basics[keys[i]][j]);
 					nouns[keys[i]][basics[keys[i]][j].id] = new load.Model(basics[keys[i]][j], load);
 					nouns[keys[i]][basics[keys[i]][j].id]._class = nouns[keys[i]][basics[keys[i]][j].id]._type = keys[i];
 				}
@@ -337,14 +338,14 @@ module.exports = function(configuration, storage, models, handlers, support) {
 	this.currentState = function(player, mark) {
 		mark = mark || 0;
 		console.log("Player Current State: ", player);
-		
+
 		var state = {},
 			noun,
 			keys,
 			ids,
 			i,
 			j;
-		
+
 		keys = Object.keys(nouns);
 		for(i=0; i<keys.length; i++) {
 			ids = Object.keys(nouns[keys[i]]);
@@ -360,7 +361,7 @@ module.exports = function(configuration, storage, models, handlers, support) {
 				}
 			}
 		}
-		
+
 		return state; // TODO: Finish implementation for pruning
 
 //		var state;
