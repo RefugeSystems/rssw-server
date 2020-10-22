@@ -1,0 +1,18 @@
+{
+	"server": {
+		"web_root": "ui",
+		"port": 3000
+	}
+	-- OR --
+	"server": {
+		"port": 3000,
+		"certificate_authority": "/path/to/interim.crt",
+		"certificate": "/path/to/ssl.crt",
+		"privateKey": "/path/to/ssl.key"
+	}
+	-- Additional Flag Examples --
+	"server": {
+		"web_root": "/path/to/base/web/folder/to/serve"
+		"redirect": "https://to.this.url/when/a/get/request/is/received.html"
+	}
+}

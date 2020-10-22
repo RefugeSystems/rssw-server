@@ -1,12 +1,19 @@
 
 var spaces = new RegExp("\\s");
 
+var configuration = require("a-configuration"),
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked;
+
 module.exports = {
 	"events": ["player:create:self"],
 	"process": function(universe, event) {
 		console.log("Create Player Entity: ", event);
 		// TODO: Clean Up Data Insertion
-		if(event.player.master) {
+		if(locked) {
+			console.log("Character creation blocked: Catabase locked");
+			
+		} else if(event.player.master) {
 			// Build NPC
 			if(!event.data.id) {
 				event.data.id = "entity:npc:" + (event.data.name?event.data.name.replace(spaces, "").toLowerCase():"noname") + ":" + Date.now();

@@ -1,8 +1,10 @@
 
+var path = require("path"),
+	fs = require("fs");
 
 /**
- * 
- * 
+ *
+ *
  * @class GameCore
  * @constructor
  * @param {Array} models Objects defining a "type" and "construct" method to create objects based on
@@ -15,42 +17,78 @@ module.exports = function(configuration, models, handlers, log) {
 	require("./extensions/string.js");
 	require("./extensions/array.js");
 	var Universe = require("./universe"),
+		Storage = require("./storage"), // require("./storage"),
 		WebSocket = require("ws"),
 		URL = require("url").URL,
 		HTTPS = require("https"),
 		HTTP = require("http"),
-		fs = require("fs"),
-	
+
 		options = {},
 		universe,
 		handler,
+		storage,
+		support,
 		server,
-		log;
-	
+		log,
+		x;
+
 	if(!configuration) {
 		configuration = require("a-configuration");
 	}
 	log = log || configuration.log || console;
-	universe = new Universe(configuration, models, handlers);
+
+	storage = Storage.getConfiguredConnection(configuration.database, configuration);
+	if(configuration.database_supporting) {
+		support = [];
+		for(x=configuration.database_supporting.length - 1; 0 <= x; x--) {
+			support.push(Storage.getConfiguredConnection(configuration.database_supporting[x], configuration));
+		}
+	}
+
+	universe = new Universe(configuration, storage, models, handlers, support);
+	console.log("Universe Made");
 	universe.on("error", function(event) {
-		log.error(event);
+		var data = {};
+		data.type = "error";
+		data.origin = "universe";
+		data.time = new Date();
+		data.date = data.time.toISOString();
+		data.time = data.time.getTime();
+		data.event = event;
+		log.error(data);
 	});
 	universe.on("online", function(event) {
-		log.info(event);
+		var data = {};
+		data.type = "online";
+		data.origin = "universe";
+		data.time = new Date();
+		data.date = data.time.toISOString();
+		data.time = data.time.getTime();
+		data.event = event;
+		data.port = configuration.server.port;
+		log.info(data);
 	});
 	universe.on("warning", function(event) {
-		log.warn(event);
+		var data = {};
+		data.type = "warning";
+		data.origin = "universe";
+		data.time = new Date();
+		data.date = data.time.toISOString();
+		data.time = data.time.getTime();
+		data.event = event;
+		log.warn(data);
 	});
-	
+	console.log("Listening to Universe");
+
 	if(configuration.server.key) {
-		options.ca = fs.readFileSync(configuration.server.interm || configuration.server.certificateAuthority || configuration.server.ca, "utf-8");
+		options.ca = fs.readFileSync(configuration.server.interm || configuration.server.certificate_authority || configuration.server.certificateAuthority || configuration.server.ca, "utf-8");
 		options.cert = fs.readFileSync(configuration.server.certificate || configuration.server.crt || configuration.server.public, "utf-8");
 		options.key = fs.readFileSync(configuration.server.privateKey || configuration.server.key || configuration.server.private, "utf-8");
 		server = HTTPS.createServer(options);
 	} else {
 		server = HTTP.createServer();
 	}
-	
+
 	options.noServer = true;
 	handler = new WebSocket.Server(options);
 	// This is essentially an extra bounce, can be moved to a direct Universe connection or at least out of the core server initialization for clarity
@@ -58,7 +96,7 @@ module.exports = function(configuration, models, handlers, log) {
 		connection.session = request.session;
 		connection.request = request;
 		connection.host = request.ip;
-		
+
 		if(request.session) {
 			connection.username = request.session.username;
 			connection.passcode = request.session.passcode;
@@ -70,29 +108,111 @@ module.exports = function(configuration, models, handlers, log) {
 			connection.name = request.url.searchParams.get("name");
 			connection.id= request.url.searchParams.get("id");
 		}
-		
+
 		log.info({
 			"user": connection.id,
 			"username": connection.username,
 			"ip": request.connection.remoteAddress,
 			"receivedPasscode": !!connection.passcode
 		}, "New Connection Received");
-		
+
 //		console.log("Registering Client: ", connection.session);
 		if(connection.passcode) {
 			connection.passcode = connection.passcode.sha256();
 		}
 		universe.connectPlayer(connection);
 	});
-	
+
+	if(configuration.server.web_root) {
+		// __dirname is the app folder for this script, so indexing up one level to get the root where the "standard included" UI folder will be
+		if(configuration.server.web_root[0] === "/" || configuration.server.web_root[1] === ":") {
+			configuration.server.web_root = path.normalize(configuration.server.web_root);
+		} else {
+			configuration.server.web_root = path.normalize(__dirname + path.sep + ".." + path.sep + configuration.server.web_root);
+		}
+	}
+
+	// Implement a simple request server to serve the UI if desired
+	// TODO: Update build process to push a new Repo of the Server+UI with this configured in example configurations
+	server.on("request", function(request, response) {
+		if(configuration.server.redirect) {
+			response.setHeader("Location", configuration.server.redirect);
+			response.statusMessage = "See UI Site";
+			response.statusCode = 301;
+			response.end();
+		} else if(request.method.toLowerCase() === "get" && configuration.server.web_root && request.url.indexOf("..") === -1) {
+			var pathing,
+				type;
+			if(request.url === "/") {
+				pathing = path.normalize(configuration.server.web_root + request.url + "index.html");
+			} else {
+				pathing = path.normalize(configuration.server.web_root + request.url);
+			}
+
+			// TODO: Fold into standard logging at debug level
+			// console.log("GET[" + request.url + "]: " + pathing);
+			if(pathing.startsWith(configuration.server.web_root)) {
+				fs.readFile(pathing, function(err, data) {
+					if(err) {
+						response.statusMessage = "Requested File Not Found";
+						response.statusCode = 404;
+						response.end();
+					} else {
+						type = path.extname(pathing);
+						if(type) {
+							type = type.substring(1);
+						}
+						switch(type) {
+							case "js":
+								response.setHeader("Content-Type", "text/javascript");
+								break;
+							case "json":
+								response.setHeader("Content-Type", "application/json");
+								break;
+							case "htm":
+								type = "html";
+							case "css":
+							case "html":
+								response.setHeader("Content-Type", "text/" + type);
+								break;
+							case "jpg":
+								type = "jpeg";
+							case "jpeg":
+							case "png":
+							case "gif":
+								response.setHeader("Content-Type", "image/" + type);
+								break;
+							case "svg":
+								response.setHeader("Content-Type", "image/svg+xml");
+								break;
+							default:
+								response.setHeader("Content-Type", "text/plain");
+								break;
+						}
+						response.statusCode = 200;
+						response.end(data);
+					}
+				});
+			} else {
+				response.statusMessage = "Malformed URL";
+				response.statusCode = 400;
+				response.end();
+			}
+		} else {
+			response.statusMessage = "Invalid Request Received";
+			response.statusCode = 400;
+			response.end();
+		}
+	});
+
 	server.on("upgrade", function(request, socket, head) {
 		request.url = new URL("http://self" + request.url);
 //		console.log("Upgrade URL: ", request.url);
-	
+
 		if(request.url.pathname === "/connect") {
 			request.query = request.url.query; // This doesn't appear to be handled by WS
 			request.path = request.url.pathname;
-			
+
 //			console.log("Verifying Client: ", request.query);
 			if(configuration.sessions && configuration.sessions.verify) {
 				configuration.sessions.verify(request)
@@ -122,55 +242,84 @@ module.exports = function(configuration, models, handlers, log) {
 			socket.destroy();
 		}
 	});
-	
+
 	server.listen(configuration.server.port);
-	console.log("Listening: " + configuration.server.port);
 };
 
 var configuration = require("a-configuration");
+
 configuration._await
 .then(function() {
+	var recoveryFile = __dirname + path.sep + "app" + path.sep + "configuration" + path.sep + "recover.json";
+	console.log("Recovery Path: " + recoveryFile);
+	fs.writeFile(recoveryFile, emptyRecoveryFile, function(err) {
+		if(err) {
+			console.error("Failed to clear recovery file");
+		}
+		// Ignored
+	});
+
 	var utilityHandler = require("./handlers/utility"),
+		journalHandler = require("./handlers/journals/update"),
 		itemHandler = require("./handlers/items/exchange"),
 		roomHandler = require("./handlers/rooms/exchange"),
 		characterHandler = require("./handlers/character"),
-		journalHandler = require("./handlers/journals/update"),
 		masterHandlers = require("./handlers/master"),
 		messageHandler,
 		playerHandler,
 		nounHandler,
-		
+
 		handlers = [],
 		models = [];
 
+	/*
+	models.push({
+		"Model": require("./models/entity.js"),
+		"type": "entity"
+	});
+	models.push({
+		"Model": require("./models/party.js"),
+		"type": "party"
+	});
+	models.push({
+		"Model": require("./models/event.js"),
+		"type": "event"
+	});
+	*/
+	utilityHandler.registerNoun("entity", models, handlers, require("./models/entity.js"));
+	utilityHandler.registerNoun("party", models, handlers, require("./models/party.js"));
+	utilityHandler.registerNoun("event", models, handlers, require("./models/event.js"));
+	utilityHandler.registerNoun("minigame", models, handlers, require("./models/minigame.js"));
+
+	utilityHandler.registerNoun("widgetconfiguration", models, handlers);
 	utilityHandler.registerNoun("modifierattrs", models, handlers);
 	utilityHandler.registerNoun("modifierstats", models, handlers);
 	utilityHandler.registerNoun("archetype", models, handlers);
 	utilityHandler.registerNoun("condition", models, handlers);
-	utilityHandler.registerNoun("inventory", models, handlers);
+	utilityHandler.registerNoun("datapoint", models, handlers);
+	utilityHandler.registerNoun("datausage", models, handlers);
+//	utilityHandler.registerNoun("inventory", models, handlers);
 	utilityHandler.registerNoun("knowledge", models, handlers);
 	utilityHandler.registerNoun("streamurl", models, handlers);
 	utilityHandler.registerNoun("itemtype", models, handlers);
-	utilityHandler.registerNoun("loglevel", models, handlers);
+//	utilityHandler.registerNoun("loglevel", models, handlers);
 	utilityHandler.registerNoun("location", models, handlers);
 	utilityHandler.registerNoun("playlist", models, handlers);
+	utilityHandler.registerNoun("maneuver", models, handlers);
 	utilityHandler.registerNoun("journal", models, handlers);
 	utilityHandler.registerNoun("session", models, handlers);
 	utilityHandler.registerNoun("setting", models, handlers);
 	utilityHandler.registerNoun("ability", models, handlers);
 	utilityHandler.registerNoun("dataset", models, handlers);
-	utilityHandler.registerNoun("loadout", models, handlers);
+//	utilityHandler.registerNoun("loadout", models, handlers);
 //	utilityHandler.registerNoun("history", models, handlers);
-	utilityHandler.registerNoun("entity", models, handlers);
+	utilityHandler.registerNoun("action", models, handlers);
 	utilityHandler.registerNoun("effect", models, handlers);
-	utilityHandler.registerNoun("locale", models, handlers);
 //	utilityHandler.registerNoun("planet", models, handlers);
 	utilityHandler.registerNoun("widget", models, handlers);
 	utilityHandler.registerNoun("image", models, handlers);
-	utilityHandler.registerNoun("party", models, handlers);
 	utilityHandler.registerNoun("skill", models, handlers);
 	utilityHandler.registerNoun("note", models, handlers);
-	utilityHandler.registerNoun("book", models, handlers);
 	utilityHandler.registerNoun("type", models, handlers);
 	utilityHandler.registerNoun("item", models, handlers);
 	utilityHandler.registerNoun("race", models, handlers);
@@ -178,15 +327,6 @@ configuration._await
 	utilityHandler.registerNoun("slot", models, handlers);
 	utilityHandler.registerNoun("sex", models, handlers);
 
-	models.push({
-		"Model": require("./models/party.js"),
-		"type": "party"
-	});
-	models.push({
-		"Model": require("./models/entity.js"),
-		"type": "entity"
-	});
-	
 	handlers.push(characterHandler.create);
 	handlers.push(masterHandlers.control);
 	handlers.push(journalHandler.update);
@@ -195,7 +335,34 @@ configuration._await
 	handlers.push(roomHandler.give);
 	handlers.push(roomHandler.take);
 
+	handlers.push(require("./handlers/entity/rolled"));
+	handlers.push(require("./handlers/shopping/checkout"));
+	handlers.push(require("./handlers/system/api"));
+	handlers.push(require("./handlers/items/recharge"));
+	handlers.push(require("./handlers/items/debug"));
+	handlers.push(require("./handlers/items/draw"));
+	handlers.push(require("./handlers/session/destiny_light"));
+	handlers.push(require("./handlers/session/destiny_dark"));
+	handlers.push(require("./handlers/data"));
+	handlers.push({
+		"process": utilityHandler.deleteProcessor,
+		"events": ["player:delete:player"]
+	});
+
+	handlers.push({
+		"process": require("./handlers/stop"),
+		"events": ["player:stop"]
+	});
+
 	new module.exports(configuration, models, handlers);
+	console.log("Bound");
 }).catch(function(err) {
 	console.log("Err: ", err);
 });
+
+emptyRecoveryFile = JSON.stringify({
+	"recover": {
+		"clearing": [],
+		"master": []
+	}
+}, null, "\t");

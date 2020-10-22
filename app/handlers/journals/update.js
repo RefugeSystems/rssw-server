@@ -1,5 +1,13 @@
 
+var configuration = require("a-configuration"),
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked;
+
 var allowedToModify = function(universe, event, entry) {
+	if(locked) {
+		return false;
+	}
+	
 	if(event.player.master) {
 		return true;
 	}
@@ -22,6 +30,10 @@ var allowedToModify = function(universe, event, entry) {
 module.exports.update = {
 	"events": ["player:update:journal"],
 	"process": function(universe, event) {
+		if(locked) {
+			return false;
+		}
+		
 		var entry = universe.nouns[event.data._type][event.data.id],
 			data = JSON.parse(JSON.stringify(event.data)),
 			operation;

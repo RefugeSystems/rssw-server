@@ -35,6 +35,25 @@ if(!Array.prototype.purge) {
 }
 
 /**
+ *
+ * @method contains
+ * @for Array
+ * @param {Boolean | Number | String | Object} entry
+ * @return {Boolean} Returns true if the indicated entry is in the array.
+ */
+if(!Array.prototype.contains) {
+	Array.prototype.contains = function(entry) {
+		for(var x=0; x<this.length; x++) {
+			if(this[x] && (this[x] === entry.id || this[x].id === entry.id || this[x] === entry || this[x].id === entry)) {
+				return true;
+			}
+		}
+
+		return this.indexOf(entry) !== -1;
+	};
+}
+
+/**
  * Computes a new array containing ONLY objects contained in both arrays, while attempting to
  * avoid repeats of an object. The comparison is done using one of 3 methods in order:
  *

@@ -5,6 +5,10 @@
  * @module Handlers
  */
 
+var configuration = require("a-configuration"),
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked;
+
 /**
  * Maps player object keys to a boolean to indicate if a player
  * can update that property when they are the account owner.
@@ -49,6 +53,10 @@ modifiable.id = true;
  * @param {Object} event
  */
 module.exports.modify = function(universe, event) {
+	if(locked) {
+		return false;
+	}
+	
 	var keys,
 		x;
 	

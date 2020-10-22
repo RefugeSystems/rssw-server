@@ -1,11 +1,16 @@
 
+var configuration = require("a-configuration"),
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked;
+
 var allowedToModify = function(universe, event) {
+	if(locked) {
+		return false;
+	}
+
 	if(event.player.master) {
 		return true;
 	}
-	
-	
-
 
 	return false;
 };
@@ -13,7 +18,7 @@ var allowedToModify = function(universe, event) {
 var hasItemInItem = function(parameters) {
 	var hold,
 		x;
-	
+
 	if((parameters.event.player.master || parameters.event.player.id === parameters.source.owner || (parameters.source.owners && parameters.source.owners.indexOf(parameters.event.player.id) !== -1))
 			&& parameters.source.item
 			&& parameters.source.item.length) {
@@ -32,7 +37,7 @@ var hasItemInItem = function(parameters) {
 			}
 		}
 	}
-	
+
 	return false;
 };
 
@@ -59,7 +64,7 @@ var takeItem = function(parameters) {
 	return new Promise(function(done, fail) {
 		var index = parameters.source.item.indexOf(parameters.event.data.item),
 			container;
-		
+
 		if(index !== -1 && parameters.source._type) {
 			parameters.source.item.splice(index, 1);
 			parameters.universe.collections[parameters.source._type].updateOne({"id":parameters.source.id}, {"$set":{"item": parameters.source.item}})
@@ -85,7 +90,7 @@ var takeItem = function(parameters) {
 				});
 				parameters.universe.emit("model:modified", notify);
 //				console.log("Taken: ", parameters.event.data.item, parameters.source);
-				console.log("Taken:" + JSON.stringify(notify, null, 4));
+				console.log("Taken1:" + JSON.stringify(notify, null, 4));
 				done(parameters);
 			})
 			.catch(fail);
@@ -94,10 +99,12 @@ var takeItem = function(parameters) {
 			parameters.universe.collections[container._type].updateOne({"id":container.id}, {"$set":{"item": container.item}})
 			.then(function() {
 				notify = {};
-				notify.modification = {
-					"item": container.item
-				};
-				notify.type = container._type;
+//				notify.modification = {
+//					"item": container.item
+//				};
+				notify.modification = {};
+				notify.modification.item = container.item;
+				notify.type = container._class || container._type;
 				notify.time = Date.now();
 				notify.id = container.id;
 				parameters.universe.emit("entity:item:loss", {
@@ -106,7 +113,7 @@ var takeItem = function(parameters) {
 				});
 				parameters.universe.emit("model:modified", notify);
 //				console.log("Taken: ", parameters.event.data.item, parameters.source);
-				console.log("Taken:" + JSON.stringify(notify, null, 4));
+				console.log("Taken2:" + JSON.stringify(notify, null, 4));
 				done(parameters);
 			})
 			.catch(fail);
@@ -159,23 +166,35 @@ var giveItem = function(parameters) {
 module.exports.give = {
 	"events": ["player:give:item"],
 	"process": function(universe, event) {
-		var source = universe.nouns.inventory[event.data.inventory] || universe.nouns.entity[event.data.source],
+		if(locked) {
+			return false;
+		}
+
+//		var source = universe.nouns.inventory[event.data.inventory] || universe.nouns.entity[event.data.source],
+		var source = universe.nouns.entity[event.data.source] || universe.nouns.item[event.data.source],
 			item = universe.nouns.item[event.data.item],
 			parameters = {},
 			receiving,
 			old_item,
 			notify;
-		
+
 		if(receiving = universe.nouns.entity[event.data.target]) {
+			receiving._class = "entity";
 			receiving._type = "entity";
-		} else if(receiving = universe.nouns.inventory[event.data.target]) {
-			receiving._type = "inventory";
+//		} else if(receiving = universe.nouns.inventory[event.data.target]) {
+//			receiving._type = "inventory";
 		} else if(receiving = universe.nouns.item[event.data.target]) {
+			receiving._class = "item";
 			receiving._type = "item";
 		}
 
-		if(!(source)) {
+		if(!source) {
 			console.log("Requires an entity, item, or inventory to give the item: ", event);
+		} else {
+			// TODO: Validate source (Entity has it in "item" or inventory has it)
+		}
+		if(!receiving) {
+			console.log("Requires an entity, item, or inventory to receive the item: ", event);
 		} else {
 			// TODO: Validate source (Entity has it in "item" or inventory has it)
 		}
@@ -184,16 +203,16 @@ module.exports.give = {
 		parameters.receiving = receiving;
 		parameters.source = source;
 		parameters.event = event;
-		
+
 		if(!parameters.receiving.item) {
 			parameters.receiving.item = [];
 		}
-		
+
 		if(source && receiving && !receiving.template && !source.template) {
 			if(!parameters.source.item) {
 				parameters.source.item = [];
 			}
-			
+
 			ownsSource(parameters)
 			.then(takeItem)
 			.then(giveItem)
@@ -201,7 +220,7 @@ module.exports.give = {
 				console.error("Failed to give item to target: ", event, "\n\n>> Fault:\n", fault);
 				universe.emit("error", fault);
 			});
-			
+
 		} else if(receiving && !receiving.template && event.player.master) {
 			if(item.template) {
 				// TODO: Add Randomization
@@ -211,7 +230,7 @@ module.exports.give = {
 				item.source_template = old_item.id;
 				item.parent = old_item.id;
 				item.id = old_item.id + ":" + Date.now();
-	
+
 				universe.nouns.item[item.id] = item;
 				universe.collections.item.insertOne(item)
 				.then(function() {
@@ -247,7 +266,7 @@ module.exports.give = {
 					notify.time = Date.now();
 					notify.id = receiving.id;
 					universe.emit("model:modified", notify);
-					console.log("Given: ", item, receiving);
+					console.log("Given: ", item.id, receiving.id);
 				})
 				.catch(universe.generalError);
 			} else {
@@ -271,30 +290,34 @@ module.exports.give = {
 					notify.time = Date.now();
 					notify.id = receiving.id;
 					universe.emit("model:modified", notify);
-					console.log("Given: ", item, receiving);
+					console.log("Given: ", item.id, receiving.id);
 				})
 				.catch(universe.generalError);
 			}
 		} else {
 			console.log("[!] Not Given: ", item, receiving);
 		}
-		
+
 	}
 };
 
 module.exports.take = {
 	"events": ["player:take:item"],
 	"process": function(universe, event) {
+		if(locked) {
+			return false;
+		}
+
 		var item = universe.nouns.item[event.data.item],
 			index = -2,
 			notify,
 			target,
 			x;
-		
+
 		if(target = universe.nouns.entity[event.data.target]) {
 			target._type = "entity";
-		} else if(target = universe.nouns.inventory[event.data.target]) {
-			target._type = "inventory";
+//		} else if(target = universe.nouns.inventory[event.data.target]) {
+//			target._type = "inventory";
 		} else if(target = universe.nouns.item[event.data.target]) {
 			target._type = "item";
 		}
@@ -311,7 +334,7 @@ module.exports.take = {
 					index = x;
 				}
 			}
-			
+
 			if(index !== -2) {
 				target.item.splice(index, 1);
 				universe.collections[target._type].updateOne({"id":target.id}, {"$set":{"item": target.item}})
@@ -327,7 +350,11 @@ module.exports.take = {
 							"time": Date.now()
 						});
 					}
-					notify.modification.item = item.id;
+//					notify.modification.item = item.id;
+					notify.modification = {
+						"history": target.history,
+						"item": target.item
+					};
 					notify.type = target._type;
 					notify.time = Date.now();
 					notify.id = target.id;
@@ -341,6 +368,6 @@ module.exports.take = {
 		} else {
 			console.log("[!] Not Taken: ", item, target);
 		}
-		
+
 	}
 };

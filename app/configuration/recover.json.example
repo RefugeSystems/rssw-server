@@ -1,0 +1,6 @@
+{
+	"recover": {
+		"clearing": ["master"],
+		"master": ["master"]
+	}
+}

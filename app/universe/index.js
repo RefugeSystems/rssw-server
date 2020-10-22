@@ -2,11 +2,74 @@ var EventEmitter = require("events").EventEmitter,
 	Handlers = require("../handlers"),
 	Random = require("rs-random"),
 	util = require("util"),
-	closeSocket;
+	closeSocket,
+	basics,
+
+	defaultMaster = {
+		"id": "master",
+		"username": "master",
+		"master": true,
+		"description": "Default master account"
+	};
 
 closeSocket = function(connection, conf) {
-	connection.close(conf.code, conf.reacon);
+	connection.close(conf.code, conf.reason);
 };
+
+/**
+ * Maps types to an array of objects to ensure exist even
+ * if a copy was not found in the loaded storage objects.
+ *
+ * These are used to fill small gaps in the UI where the
+ * loaded object is needed, such as the Master View location
+ * generation in the Map view.
+ * @property basics
+ * @type Object
+ * @private
+ */
+basics = {};
+basics.type = [{
+		"id": "star_system",
+		"name": "Star System"
+	}, {
+		"id": "station",
+		"name": "Station"
+	}, {
+		"id": "planet",
+		"name": "Planet"
+	}, {
+		"id": "moon",
+		"name": "Moon"
+	}, {
+		"id": "city",
+		"name": "City"
+	}, {
+		"id": "marker",
+		"name": "Marker"
+	}, {
+		"id": "pilot",
+		"name": "Pilot"
+	}, {
+		"id": "character",
+		"name": "Character"
+	}, {
+		"id": "ship",
+		"name": "Ship"
+	}, {
+		"id": "room",
+		"name": "Room"
+	}, {
+		"id": "building",
+		"name": "Building"
+}];
+basics.knowledge = [{
+	"id": "knowledge:token:destiny",
+	"name": "Destiny Points"
+}];
+basics.setting = [{
+	"id": "setting:current:session",
+	"name": "Current Session"
+}];
 
 /**
  * Handles the processing of events to sync between different settings.
@@ -17,11 +80,12 @@ closeSocket = function(connection, conf) {
  * @param {Array} models
  * @param {Array} handlers
  */
-module.exports = function(configuration, models, handlers) {
+module.exports = function(configuration, storage, models, handlers, support) {
+	this.locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
 	this.version = configuration.package.version;
 	this.bounds = configuration.bounds;
 	this.setMaxListeners(200);
-	
+
 	var LogHandler = require("../handlers/system/logging"),
 		Player = require("../handlers/player/channel"),
 		constructor = this.constructor = {},
@@ -32,19 +96,12 @@ module.exports = function(configuration, models, handlers) {
 		passcodes = {},
 		modeling = {},
 		players = {},
-		generalError,
 		loaded = [],
 		support,
 		loading,
 		db,
 		x;
-	
-	if(configuration.supporting) {
-//		console.log("Supported: ", configuration.supporting);
-		support = configuration.mongo.connectDB(configuration.supporting.database);
-//		console.log("Support: ", support);
-	}
-	
+
 	if(!configuration.codes) {
 		configuration.codes = {};
 	}
@@ -65,7 +122,7 @@ module.exports = function(configuration, models, handlers) {
 		"events": ["player:modify:player"],
 		"process": Handlers.player.modify
 	});
-	
+
 	this.generalError = generalError = function(exception, message) {
 		universe.emit("error", {
 			"message": message || "General Error",
@@ -73,35 +130,40 @@ module.exports = function(configuration, models, handlers) {
 			"error": exception
 		});
 	};
-	
-	db = configuration.mongo.connectDB(configuration.core.database);
-	collections.player = db.collection("player");
+
+	collections.player = storage.collection("player");
 	for(x=0; x<models.length; x++) {
-		collections[models[x].type] = db.collection(models[x].type);
+		collections[models[x].type] = storage.collection(models[x].type);
 	}
-	collections._trash = db.collection("_trash");
-	
-	loading = collections.player.find().sort({"updated":-1}).toArray();
+	collections._trash = storage.collection("_trash");
+
+	loading = collections.player.getAll();
 	loading = loading.then(function(buffer) {
 		nouns.player = {};
-		for(x=0; x<buffer.length; x++) {
-			if(!players[buffer[x].id]) {
-				players[buffer[x].id] = new Player(universe, buffer[x]);
-				nouns.player[buffer[x].id] = players[buffer[x].id];
-				if(buffer[x].passcode) {
-					passcodes[buffer[x].id] = buffer[x].passcode;
-					delete(buffer[x].passcode);
+		if(buffer && buffer.length) {
+			for(x=0; x<buffer.length; x++) {
+				if(!players[buffer[x].id]) {
+					players[buffer[x].id] = new Player(universe, buffer[x]);
+					nouns.player[buffer[x].id] = players[buffer[x].id];
+					if(buffer[x].passcode) {
+						passcodes[buffer[x].id] = buffer[x].passcode;
+						delete(buffer[x].passcode);
+					}
+				} else {
+					universe.emit("warning", {
+						"message": "Duplicate Object",
+						"time": Date.now(),
+						"type": "player",
+						"data": buffer[x]
+					});
 				}
-			} else {
-				universe.emit("warning", {
-					"message": "Duplicate Object",
-					"time": Date.now(),
-					"type": "player",
-					"data": buffer[x]
-				});
 			}
+		} else {
+			collections.player.insertOne(defaultMaster);
+			players[defaultMaster.id] = new Player(universe, defaultMaster);
+			nouns.player[defaultMaster.id] = players[defaultMaster.id];
 		}
-		return collections[models[0].type].find().toArray();
+		return collections[models[0].type].getAll();
 	});
 	models.forEach(function(load, i) {
 		constructor[load.type] = load.Model;
@@ -109,16 +171,17 @@ module.exports = function(configuration, models, handlers) {
 
 		loading = loading.then(function(buffer) {
 			nouns[load.type] = {};
-			
+
 			// Underlying Data Bases
 			if(support) {
 				return new Promise(function(done, fail) {
 					var col = support.collection(models[i].type);
-					col.find().sort({"updated":-1}).toArray().then(function(supporting) {
+					col.getAll().then(function(supporting) {
 						for(x=0; x<supporting.length; x++) {
 							if(!nouns[load.type][supporting[x].id]) {
 								supportLoad[supporting[x].id] = true;
 								nouns[load.type][supporting[x].id] = new load.Model(supporting[x], load);
+								nouns[load.type][supporting[x].id]._class = load.type;
 								nouns[load.type][supporting[x].id]._type = load.type;
 								loaded.push(nouns[load.type][supporting[x].id]);
 							} else {
@@ -145,6 +208,7 @@ module.exports = function(configuration, models, handlers) {
 				if(!nouns[load.type][buffer[x].id] || supportLoad[buffer[x].id]) {
 					supportLoad[buffer[x].id] = false;
 					nouns[load.type][buffer[x].id] = new load.Model(buffer[x], load);
+					nouns[load.type][buffer[x].id]._class = load.type;
 					nouns[load.type][buffer[x].id]._type = load.type;
 					loaded.push(nouns[load.type][buffer[x].id]);
 				} else {
@@ -158,14 +222,39 @@ module.exports = function(configuration, models, handlers) {
 			}
 			i = i + 1;
 			if(i < models.length) {
-				return collections[models[i].type].find().sort({"updated":-1}).toArray();
+				return collections[models[i].type].getAll();
 			}
 		});
 	});
 	loading.then(function() {
-		universe.emit("online", {
-			"time": Date.now()
-		});
+		var keys = Object.keys(basics),
+			load,
+			i,
+			j;
+
+		for(i=0; i<keys.length; i++) {
+			load = modeling[keys[i]];
+			for(j=0; j<basics[keys[i]].length; j++) {
+				if(!nouns[keys[i]][basics[keys[i]][j].id]) {
+					collections[keys[i]].insertOne(basics[keys[i]][j]);
+					nouns[keys[i]][basics[keys[i]][j].id] = new load.Model(basics[keys[i]][j], load);
+					nouns[keys[i]][basics[keys[i]][j].id]._class = nouns[keys[i]][basics[keys[i]][j].id]._type = keys[i];
+				}
+			}
+		}
+
+		if(configuration.recover) {
+			if(configuration.recover.clearing) {
+				for(i=0; i<configuration.recover.clearing.length; i++) {
+					delete(passcodes[configuration.recover.master[i]]);
+				}
+			}
+			if(configuration.recover.master) {
+				for(i=0; i<configuration.recover.master.length; i++) {
+					nouns.player[configuration.recover.master[i]].master = true;
+				}
+			}
+		}
 	}).then(function() {
 		handlers.forEach(function(handler) {
 			handler.events.forEach(function(eventType) {
@@ -184,6 +273,10 @@ module.exports = function(configuration, models, handlers) {
 				});
 			});
 		});
+	}).then(function() {
+		universe.emit("online", {
+			"time": Date.now()
+		});
 	}).catch(function(err) {
 		universe.emit("error", {
 			"message": err.message || "Unspecified Error",
@@ -191,17 +284,10 @@ module.exports = function(configuration, models, handlers) {
 			"error": err
 		});
 	});
-	
-	var allowedToModify = function(event) {
-		return event.data && event.type && universe.nouns[event.type] && 
-			(event.player.master || // Master
-					universe.nouns[event.type][event.id].owner === event.player.id || // Owning Player
-					(universe.nouns[event.type][event.id].owners && universe.nouns[event.type][event.id].owners.indexOf(event.player.id) !== -1)); // One of many owners
-	};
-	
+
 	/**
-	 * 
-	 * 
+	 *
+	 *
 	 */
 	this.connectPlayer = function(connection) {
 		if(nouns && nouns.player) {
@@ -224,8 +310,8 @@ module.exports = function(configuration, models, handlers) {
 			closeSocket(connection, configuration.codes.notready);
 		}
 	};
-	
-	
+
+
 	this.disconnectPlayer = function(player, connection) {
 		if(player && connection) {
 			if(!passcodes[player.id] || passcodes[player.id] === connection.passcode) {
@@ -234,7 +320,7 @@ module.exports = function(configuration, models, handlers) {
 			}
 		}
 	};
-	
+
 	this.setPlayerPasscode = function(id, passcode) {
 		if(passcode) {
 			passcodes[id] = passcode;
@@ -242,18 +328,42 @@ module.exports = function(configuration, models, handlers) {
 			delete(passcodes[id]);
 		}
 	};
-	
+
 	/**
-	 * 
+	 *
 	 * @method currentState
 	 * @param {Player} [player] The player to which this update is relevant if any
 	 * @param {Number} [mark] The timestamp from which the state should be retrieved
 	 */
 	this.currentState = function(player, mark) {
 		mark = mark || 0;
-		//console.log("Nouns: ", nouns);
-		return nouns; // TODO: Finish implementation for pruning
-		
+		console.log("Player Current State: ", player);
+
+		var state = {},
+			noun,
+			keys,
+			ids,
+			i,
+			j;
+
+		keys = Object.keys(nouns);
+		for(i=0; i<keys.length; i++) {
+			ids = Object.keys(nouns[keys[i]]);
+			state[keys[i]] = {};
+			for(j=0; j<ids.length; j++) {
+				state[keys[i]][ids[j]] = Object.assign({}, nouns[keys[i]][ids[j]]);
+				if(!player.master) {
+					delete(state[keys[i]][ids[j]].master_note);
+					if(state[keys[i]][ids[j]].data && state[keys[i]][ids[j]].delay_data) {
+						state[keys[i]][ids[j]].delayed_data = true;
+						delete(state[keys[i]][ids[j]].data);
+					}
+				}
+			}
+		}
+
+		return state; // TODO: Finish implementation for pruning
+
 //		var state;
 		if(!player && !mark) {
 			return nouns;

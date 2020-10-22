@@ -1,5 +1,10 @@
 
 var spaces = new RegExp("\\s"),
+
+	configuration = require("a-configuration"),
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked,
+
 	trackedValues = [
 		"location",
 		"credits",
@@ -18,9 +23,11 @@ var spaces = new RegExp("\\s"),
 		"item"
 	];
 
-
-
 var allowedToModify = function(universe, event) {
+	if(locked) {
+		return false;
+	}
+	
 	if(event.player.master) {
 		return true;
 	}

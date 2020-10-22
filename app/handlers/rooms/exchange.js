@@ -1,5 +1,13 @@
 
+var configuration = require("a-configuration"),
+	locked = configuration.settings.dblock || configuration.settings.databaselock || configuration.settings.database_lock || configuration.settings.db_lock,
+	changable = !locked;
+
 var allowedToModify = function(universe, event) {
+	if(locked) {
+		return false;
+	}
+	
 	if(event.player.master) {
 		return true;
 	}
@@ -12,6 +20,10 @@ var allowedToModify = function(universe, event) {
 module.exports.give = {
 	"events": ["player:give:room"],
 	"process": function(universe, event) {
+		if(locked) {
+			return false;
+		}
+		
 		var inventory = universe.nouns.inventory[event.data.inventory],
 			entityGiving = universe.nouns.entity[event.data.source],
 			room = universe.nouns.room[event.data.room],
@@ -91,6 +103,10 @@ module.exports.give = {
 module.exports.take = {
 	"events": ["player:take:room"],
 	"process": function(universe, event) {
+		if(locked) {
+			return false;
+		}
+		
 		var room = universe.nouns.room[event.data.room],
 			notify = -2,
 			target,
