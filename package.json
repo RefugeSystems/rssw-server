@@ -23,7 +23,7 @@
 		"mongodb": "^3.6.2",
 		"root-require": "^0.3.1",
 		"rs-random": "^1.0.41",
-		"sqlite3": "^5.0.0",
+		"sqlite3": "^5.0.3",
 		"ws": "^7.3.1"
 	},
 	"devDependencies": {
